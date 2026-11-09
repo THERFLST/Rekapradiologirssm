@@ -2,55 +2,33 @@
   'use strict';
 
   const SERVICE_KEY = 'rekap-radiologi-service-time-v1';
-  const REQUIRED = {
-    exam: ['pemeriksaan', 'jenis pemeriksaan'],
-    registration: ['waktu registrasi'],
-    arrival: ['waktu kedatangan'],
-    completion: ['waktu selesai'],
-    billingDuration: ['selisih waktu selesai-konfirmasi', 'selisih waktu (selesai-konfirmasi)'],
-    arrivalDuration: ['selisih waktu selesai-kedatangan', 'selisih waktu (selesai-kedatangan)'],
-    billingTime: ['konfirmasi billing']
-  };
-
   const $ = (id) => document.getElementById(id);
-  let previewEntries = [];
+  let pendingEntries = [];
 
-  function cleanHeader(value) {
-    return String(value ?? '').trim().toLocaleLowerCase('id-ID').replace(/\s+/g, ' ');
+  const normalize = (value) => String(value ?? '').trim().toLocaleLowerCase('id-ID').replace(/[()–—]/g, ' ').replace(/\s+/g, ' ').trim();
+  const dateKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const fmtDuration = (minutes) => {
+    if (!Number.isFinite(minutes)) return '—';
+    const rounded = Math.round(minutes);
+    return `${Math.floor(rounded / 60)} jam ${String(rounded % 60).padStart(2, '0')} menit`;
+  };
+  const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+
+  function headerIndex(headers, candidates) {
+    const keys = candidates.map(normalize);
+    return headers.findIndex((header) => keys.includes(normalize(header)));
   }
 
-  function getColumnIndex(headers, candidates) {
-    return headers.findIndex((header) => candidates.includes(cleanHeader(header)));
-  }
-
-  function readRows(file) {
-    return file.arrayBuffer().then((buffer) => {
-      if (!window.XLSX) throw new Error('Pemroses Excel belum siap. Coba muat ulang halaman atau periksa koneksi internet.');
-      const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
-      const sheetName = workbook.SheetNames[0];
-      if (!sheetName) throw new Error('File tidak memiliki sheet yang bisa dibaca.');
-      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, raw: true, defval: '' });
-      const headerIndex = rows.findIndex((row) => {
-        const normalized = row.map(cleanHeader);
-        return normalized.includes('pemeriksaan') && normalized.includes('waktu selesai') && normalized.includes('waktu kedatangan');
-      });
-      if (headerIndex < 0) throw new Error('Header wajib tidak ditemukan. Pastikan ada kolom Pemeriksaan, Waktu Kedatangan, dan Waktu Selesai.');
-      const headers = rows[headerIndex];
-      const columns = {
-        exam: getColumnIndex(headers, REQUIRED.exam),
-        registration: getColumnIndex(headers, REQUIRED.registration),
-        arrival: getColumnIndex(headers, REQUIRED.arrival),
-        completion: getColumnIndex(headers, REQUIRED.completion),
-        billingDuration: getColumnIndex(headers, REQUIRED.billingDuration),
-        arrivalDuration: getColumnIndex(headers, REQUIRED.arrivalDuration),
-        billingTime: getColumnIndex(headers, REQUIRED.billingTime)
-      };
-      if (columns.exam < 0 || columns.arrival < 0 || columns.completion < 0) throw new Error('Kolom Pemeriksaan, Waktu Kedatangan, dan Waktu Selesai wajib ada.');
-      return rows.slice(headerIndex + 1).filter((row) => row.some((cell) => cell !== '')).map((row, index) => ({ row, index: index + 1, columns }));
+  function findHeaderRow(rows) {
+    return rows.findIndex((row) => {
+      const headers = row.map(normalize);
+      return headers.some((value) => value === 'pemeriksaan' || value === 'jenis pemeriksaan')
+        && headers.includes('waktu selesai')
+        && headers.includes('waktu kedatangan');
     });
   }
 
-  function excelDate(value) {
+  function readDate(value) {
     if (value instanceof Date && Number.isFinite(value.getTime())) return value;
     if (typeof value === 'number' && window.XLSX?.SSF) {
       const parts = XLSX.SSF.parse_date_code(value);
@@ -58,199 +36,193 @@
     }
     const text = String(value ?? '').trim();
     if (!text) return null;
-    const usDateTime = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
-    if (usDateTime) {
-      const [, month, day, year, hour = '0', minute = '0', second = '0'] = usDateTime;
-      const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
-      return Number.isNaN(date.getTime()) ? null : date;
+    const mdy = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (mdy) {
+      const [, month, day, year, hour = '0', minute = '0', second = '0'] = mdy;
+      const result = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
+      return Number.isNaN(result.getTime()) ? null : result;
     }
-    const parsed = new Date(text);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
+    const result = new Date(text);
+    return Number.isNaN(result.getTime()) ? null : result;
   }
 
-  function dateKey(date) {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  }
-
-  function durationMinutes(value) {
-    if (typeof value === 'number' && Number.isFinite(value)) return value >= 0 && value < 1 ? value * 24 * 60 : value;
+  function readDuration(value) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value >= 0 && value < 1 ? value * 1440 : value;
     if (value instanceof Date && Number.isFinite(value.getTime())) return value.getUTCHours() * 60 + value.getUTCMinutes() + value.getUTCSeconds() / 60;
     const match = String(value ?? '').trim().match(/^(\d{1,3}):(\d{1,2})(?::(\d{1,2}))?$/);
     if (!match) return null;
     return Number(match[1]) * 60 + Number(match[2]) + Number(match[3] || 0) / 60;
   }
 
-  function hash(text) {
-    let value = 2166136261;
-    for (let index = 0; index < text.length; index += 1) {
-      value ^= text.charCodeAt(index);
-      value = Math.imul(value, 16777619);
+  function fingerprint(text) {
+    let hash = 2166136261;
+    for (let i = 0; i < text.length; i += 1) {
+      hash ^= text.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
     }
-    return (value >>> 0).toString(36);
+    return (hash >>> 0).toString(36);
   }
 
-  function parseRows(items) {
-    const imported = [];
+  async function parseFile(file) {
+    if (!window.XLSX) throw new Error('Pemroses Excel belum siap. Muat ulang halaman dan coba lagi.');
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    if (!sheet) throw new Error('Tidak ada sheet yang dapat dibaca.');
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
+    const start = findHeaderRow(rows);
+    if (start < 0) throw new Error('Header tidak dikenali. Pastikan ada kolom Pemeriksaan, Waktu Kedatangan, dan Waktu Selesai.');
+    const headers = rows[start];
+    const columns = {
+      exam: headerIndex(headers, ['Pemeriksaan', 'Jenis Pemeriksaan']),
+      registration: headerIndex(headers, ['Waktu Registrasi']),
+      billing: headerIndex(headers, ['Konfirmasi Billing']),
+      arrival: headerIndex(headers, ['Waktu Kedatangan']),
+      completion: headerIndex(headers, ['Waktu Selesai']),
+      billingDuration: headerIndex(headers, ['Selisih Waktu (Selesai-Konfirmasi)', 'Selisih Waktu Selesai-Konfirmasi']),
+      arrivalDuration: headerIndex(headers, ['Selisih Waktu (Selesai-Kedatangan)', 'Selisih Waktu Selesai-Kedatangan'])
+    };
+    const valid = [];
+    const issues = [];
     let skipped = 0;
-    const problems = [];
 
-    items.forEach(({ row, index, columns }) => {
+    rows.slice(start + 1).forEach((row, offset) => {
+      if (!row.some((cell) => String(cell ?? '').trim() !== '')) return;
       const examText = String(row[columns.exam] ?? '').trim();
-      const arrival = excelDate(row[columns.arrival]);
-      const registration = columns.registration >= 0 ? excelDate(row[columns.registration]) : null;
-      const completion = excelDate(row[columns.completion]);
-      const billing = columns.billingTime >= 0 ? excelDate(row[columns.billingTime]) : null;
+      const arrival = readDate(row[columns.arrival]);
+      const registration = columns.registration >= 0 ? readDate(row[columns.registration]) : null;
+      const completion = readDate(row[columns.completion]);
+      const billing = columns.billing >= 0 ? readDate(row[columns.billing]) : null;
       const reportDate = arrival || registration || completion;
-      if (!examText || !reportDate) {
-        skipped += 1;
-        if (problems.length < 8) problems.push(`Baris ${index + 1}: pemeriksaan atau tanggal tidak terbaca.`);
-        return;
-      }
+      let fromBilling = columns.billingDuration >= 0 ? readDuration(row[columns.billingDuration]) : null;
+      let fromArrival = columns.arrivalDuration >= 0 ? readDuration(row[columns.arrivalDuration]) : null;
+      if (fromBilling == null && completion && billing) fromBilling = Math.max(0, (completion - billing) / 60000);
+      if (fromArrival == null && completion && arrival) fromArrival = Math.max(0, (completion - arrival) / 60000);
 
-      let confirmationMinutes = columns.billingDuration >= 0 ? durationMinutes(row[columns.billingDuration]) : null;
-      let arrivalMinutes = columns.arrivalDuration >= 0 ? durationMinutes(row[columns.arrivalDuration]) : null;
-      if (confirmationMinutes == null && completion && billing) confirmationMinutes = Math.max(0, (completion - billing) / 60000);
-      if (arrivalMinutes == null && completion && arrival) arrivalMinutes = Math.max(0, (completion - arrival) / 60000);
-      if (confirmationMinutes == null && arrivalMinutes == null) {
+      if (!examText || !reportDate || (fromBilling == null && fromArrival == null)) {
         skipped += 1;
-        if (problems.length < 8) problems.push(`Baris ${index + 1}: tidak ada durasi yang bisa dibaca.`);
+        if (issues.length < 8) issues.push(`Baris ${start + offset + 2}: pemeriksaan, tanggal, atau durasi tidak terbaca.`);
         return;
       }
 
       const type = /thorax/i.test(examText) ? 'thorax' : 'lainnya';
       const date = dateKey(reportDate);
-      const signature = [date, examText.toLocaleLowerCase('id-ID'), String(row[columns.registration] ?? ''), String(row[columns.arrival] ?? ''), String(row[columns.completion] ?? ''), confirmationMinutes, arrivalMinutes].join('|');
-      imported.push({
-        importId: `sheet-${hash(signature)}`,
+      // Deliberately exclude patient name and medical-record number from the fingerprint and stored record.
+      const idText = [date, examText.toLocaleLowerCase('id-ID'), row[columns.registration], row[columns.billing], row[columns.arrival], row[columns.completion], fromBilling, fromArrival].join('|');
+      valid.push({
+        importId: `sheet-${fingerprint(idText)}`,
         source: 'spreadsheet',
         type,
         examCategory: type === 'thorax' ? 'Thorax' : 'Pemeriksaan lainnya',
-        date,
         examText,
-        confirmationMinutes: confirmationMinutes == null ? null : Math.round(confirmationMinutes * 100) / 100,
-        arrivalMinutes: arrivalMinutes == null ? null : Math.round(arrivalMinutes * 100) / 100,
-        minutes: arrivalMinutes ?? confirmationMinutes,
+        date,
+        confirmationMinutes: fromBilling == null ? null : Math.round(fromBilling * 100) / 100,
+        arrivalMinutes: fromArrival == null ? null : Math.round(fromArrival * 100) / 100,
+        minutes: fromArrival ?? fromBilling,
         createdAt: new Date().toISOString()
       });
     });
-
-    return { imported, skipped, problems };
+    return { valid, skipped, issues };
   }
 
-  function readExisting() {
+  function getRecords() {
     try {
-      const value = JSON.parse(localStorage.getItem(SERVICE_KEY) || '{}');
-      return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-    } catch {
-      return {};
-    }
+      const records = JSON.parse(localStorage.getItem(SERVICE_KEY) || '{}');
+      return records && typeof records === 'object' && !Array.isArray(records) ? records : {};
+    } catch { return {}; }
   }
 
-  function formatMinutes(value) {
-    if (!Number.isFinite(value)) return '—';
-    const rounded = Math.round(value);
-    return `${Math.floor(rounded / 60)} jam ${String(rounded % 60).padStart(2, '0')} menit`;
+  function allEntries() {
+    return Object.values(getRecords()).flatMap((list) => Array.isArray(list) ? list : [])
+      .filter((entry) => entry && /^\d{4}-\d{2}-\d{2}$/.test(entry.date));
   }
 
-  function monthlyReport(entries) {
-    const buckets = new Map();
-    entries.forEach((entry) => {
-      const key = entry.date.slice(0, 7);
-      const month = buckets.get(key) || { thorax: { billing: 0, arrival: 0, countBilling: 0, countArrival: 0 }, all: { billing: 0, arrival: 0, countBilling: 0, countArrival: 0 } };
-      const groups = [month.all];
-      if (entry.type === 'thorax') groups.push(month.thorax);
-      groups.forEach((group) => {
-        if (Number.isFinite(entry.confirmationMinutes)) { group.billing += entry.confirmationMinutes; group.countBilling += 1; }
-        if (Number.isFinite(entry.arrivalMinutes)) { group.arrival += entry.arrivalMinutes; group.countArrival += 1; }
-      });
-      buckets.set(key, month);
-    });
-    const rows = [...buckets.entries()].sort(([a], [b]) => b.localeCompare(a));
-    return rows.length ? `<table><thead><tr><th>Bulan</th><th>Jumlah Thorax</th><th>Rata-rata selesai−konfirmasi billing</th><th>Rata-rata selesai−kedatangan</th><th>Jumlah keseluruhan</th><th>Rata-rata keseluruhan (billing)</th><th>Rata-rata keseluruhan (kedatangan)</th></tr></thead><tbody>${rows.map(([key, row]) => `<tr><th>${key}</th><td>${row.thorax.countArrival.toLocaleString('id-ID')}</td><td>${formatMinutes(row.thorax.countBilling ? row.thorax.billing / row.thorax.countBilling : NaN)}</td><td>${formatMinutes(row.thorax.countArrival ? row.thorax.arrival / row.thorax.countArrival : NaN)}</td><td>${row.all.countArrival.toLocaleString('id-ID')}</td><td>${formatMinutes(row.all.countBilling ? row.all.billing / row.all.countBilling : NaN)}</td><td>${formatMinutes(row.all.countArrival ? row.all.arrival / row.all.countArrival : NaN)}</td></tr>`).join('')}</tbody></table>` : '<p class="empty-state">Belum ada data hasil import spreadsheet.</p>';
-  }
-
-  function renderImportedReport() {
+  function renderMonthly() {
     const host = $('serviceImportMonthly');
     if (!host) return;
-    const entries = Object.values(readExisting()).flatMap((list) => Array.isArray(list) ? list : []).filter((entry) => entry?.source === 'spreadsheet' && /^\d{4}-\d{2}-\d{2}$/.test(entry.date));
-    host.innerHTML = monthlyReport(entries);
+    const buckets = new Map();
+    allEntries().forEach((entry) => {
+      const month = entry.date.slice(0, 7);
+      const value = buckets.get(month) || { thorax: { billing: 0, billingN: 0, arrival: 0, arrivalN: 0 }, all: { billing: 0, billingN: 0, arrival: 0, arrivalN: 0 } };
+      const groups = [value.all];
+      if (entry.type === 'thorax') groups.push(value.thorax);
+      groups.forEach((group) => {
+        if (Number.isFinite(entry.confirmationMinutes)) { group.billing += entry.confirmationMinutes; group.billingN += 1; }
+        if (Number.isFinite(entry.arrivalMinutes)) { group.arrival += entry.arrivalMinutes; group.arrivalN += 1; }
+      });
+      buckets.set(month, value);
+    });
+    const rows = [...buckets.entries()].sort(([a], [b]) => b.localeCompare(a));
+    host.innerHTML = rows.length ? `<table><thead><tr><th>Bulan</th><th>Jumlah Thorax</th><th>Rata-rata selesai−konfirmasi billing</th><th>Rata-rata selesai−kedatangan</th><th>Jumlah seluruh pemeriksaan</th><th>Rata-rata keseluruhan (billing)</th><th>Rata-rata keseluruhan (kedatangan)</th></tr></thead><tbody>${rows.map(([month, value]) => `<tr><th>${month}</th><td>${value.thorax.arrivalN.toLocaleString('id-ID')}</td><td>${fmtDuration(value.thorax.billingN ? value.thorax.billing / value.thorax.billingN : NaN)}</td><td>${fmtDuration(value.thorax.arrivalN ? value.thorax.arrival / value.thorax.arrivalN : NaN)}</td><td>${value.all.arrivalN.toLocaleString('id-ID')}</td><td>${fmtDuration(value.all.billingN ? value.all.billing / value.all.billingN : NaN)}</td><td>${fmtDuration(value.all.arrivalN ? value.all.arrival / value.all.arrivalN : NaN)}</td></tr>`).join('')}</tbody></table>` : '<p class="empty-state">Belum ada data waktu pelayanan.</p>';
   }
 
-  function renderPreview(entries, skipped, problems) {
-    const preview = $('serviceImportPreview');
-    const confirmButton = $('serviceImportConfirm');
-    const status = $('serviceImportStatus');
-    previewEntries = entries;
-    confirmButton.hidden = entries.length === 0;
-    const sample = entries.slice(0, 12);
-    preview.innerHTML = sample.length ? `<table><thead><tr><th>Tanggal</th><th>Jenis</th><th>Selesai−Billing</th><th>Selesai−Kedatangan</th></tr></thead><tbody>${sample.map((entry) => `<tr><td>${entry.date}</td><td>${entry.examCategory}</td><td>${formatMinutes(entry.confirmationMinutes)}</td><td>${formatMinutes(entry.arrivalMinutes)}</td></tr>`).join('')}</tbody></table>${entries.length > sample.length ? `<p class="hint">Pratinjau ${sample.length} dari ${entries.length} baris valid.</p>` : ''}` : '';
-    status.textContent = `Terbaca: ${entries.length} baris valid; dilewati: ${skipped}.${problems.length ? ` ${problems.join(' ')}` : ''}`;
+  function ensureReportHost() {
+    const panel = $('serviceImportPanel');
+    if (!panel || $('serviceImportMonthly')) return;
+    const heading = document.createElement('div');
+    heading.className = 'section-title import-report-heading';
+    heading.innerHTML = '<div><h3>Rekap rata-rata waktu pelayanan</h3><p class="hint">Thorax dan seluruh pemeriksaan dihitung dari spreadsheet yang diimpor.</p></div>';
+    const host = document.createElement('div');
+    host.id = 'serviceImportMonthly';
+    host.className = 'scroll';
+    panel.append(heading, host);
   }
 
-  async function importFile() {
-    const file = $('serviceImportFile').files?.[0];
-    const status = $('serviceImportStatus');
-    if (!file) {
-      status.textContent = 'Pilih file Excel atau CSV terlebih dahulu.';
-      return;
-    }
-    status.textContent = 'Sedang membaca file di browser…';
-    $('serviceImportPreview').innerHTML = '';
+  function showPreview(result) {
+    pendingEntries = result.valid;
+    const rows = pendingEntries.slice(0, 12);
+    $('serviceImportPreview').innerHTML = rows.length ? `<table><thead><tr><th>Tanggal</th><th>Jenis</th><th>Selesai−Billing</th><th>Selesai−Kedatangan</th></tr></thead><tbody>${rows.map((entry) => `<tr><td>${entry.date}</td><td>${escapeHtml(entry.examCategory)}</td><td>${fmtDuration(entry.confirmationMinutes)}</td><td>${fmtDuration(entry.arrivalMinutes)}</td></tr>`).join('')}</tbody></table>${pendingEntries.length > 12 ? `<p class="hint">Menampilkan 12 dari ${pendingEntries.length} baris.</p>` : ''}` : '';
+    $('serviceImportConfirm').hidden = pendingEntries.length === 0;
+    $('serviceImportStatus').textContent = `Terbaca ${pendingEntries.length} baris; ${result.skipped} baris dilewati.${result.issues.length ? ` ${result.issues.join(' ')}` : ''}`;
+  }
+
+  async function readSelectedFile() {
+    const file = $('serviceImportFile')?.files?.[0];
+    if (!file) return;
+    $('serviceImportStatus').textContent = 'File dipilih, sedang dibaca dan dianalisis di browser…';
+    $('serviceImportPreview').replaceChildren();
     $('serviceImportConfirm').hidden = true;
+    pendingEntries = [];
     try {
-      const parsed = parseRows(await readRows(file));
-      renderPreview(parsed.imported, parsed.skipped, parsed.problems);
+      showPreview(await parseFile(file));
     } catch (error) {
-      previewEntries = [];
-      status.textContent = error instanceof Error ? error.message : 'File gagal dibaca.';
+      $('serviceImportStatus').textContent = error instanceof Error ? error.message : 'File gagal dibaca.';
     }
   }
 
-  function saveImported() {
-    if (!previewEntries.length) return;
-    const records = readExisting();
-    const knownIds = new Set(Object.values(records).flatMap((list) => Array.isArray(list) ? list : []).map((entry) => entry?.importId).filter(Boolean));
+  function savePreview() {
+    if (!pendingEntries.length) return;
+    const records = getRecords();
+    const known = new Set(allEntries().map((entry) => entry.importId).filter(Boolean));
     let added = 0;
-    let duplicates = 0;
-    previewEntries.forEach((entry) => {
-      if (knownIds.has(entry.importId)) { duplicates += 1; return; }
+    let duplicate = 0;
+    pendingEntries.forEach((entry) => {
+      if (known.has(entry.importId)) { duplicate += 1; return; }
       records[entry.date] = Array.isArray(records[entry.date]) ? records[entry.date] : [];
       records[entry.date].push(entry);
-      knownIds.add(entry.importId);
+      known.add(entry.importId);
       added += 1;
     });
     try {
       localStorage.setItem(SERVICE_KEY, JSON.stringify(records));
-      $('serviceImportStatus').textContent = `Import selesai: ${added} baris disimpan; ${duplicates} duplikat dilewati. Informasi identitas tidak ikut disimpan.`;
+      $('serviceImportStatus').textContent = `Selesai: ${added} baris disimpan; ${duplicate} duplikat dilewati. Nama dan No. RM tidak disimpan.`;
       $('serviceImportConfirm').hidden = true;
-      previewEntries = [];
-      renderImportedReport();
-      document.dispatchEvent(new CustomEvent('service-import-complete'));
-    } catch (error) {
-      $('serviceImportStatus').textContent = 'Gagal menyimpan: kapasitas browser mungkin tidak cukup.';
+      pendingEntries = [];
+      renderMonthly();
+      $('serviceImportPreview').replaceChildren();
+      window.dispatchEvent(new CustomEvent('service-import-complete'));
+    } catch {
+      $('serviceImportStatus').textContent = 'Gagal menyimpan: kapasitas penyimpanan browser mungkin tidak cukup.';
     }
   }
 
-  function injectPanel() {
-    const serviceView = $('v-waktu');
-    if (!serviceView || $('serviceImportPanel')) return;
-    const panel = document.createElement('section');
-    panel.id = 'serviceImportPanel';
-    panel.className = 'panel service-import-panel';
-    panel.innerHTML = `<div class="section-title"><div><h3>Import spreadsheet waktu pelayanan</h3><p class="muted">Membaca .xlsx, .xls, atau .csv. Kolom nama pasien dan No. RM diabaikan dan tidak disimpan.</p></div></div><div class="service-import-controls"><label for="serviceImportFile">Pilih file Excel/CSV<input id="serviceImportFile" type="file" accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"></label><button id="serviceImportButton" class="primary-action" type="button">Baca &amp; Pratinjau</button></div><p class="hint">Tanggal laporan memakai Waktu Kedatangan (fallback: Waktu Registrasi). Durasi diambil dari kolom Selisih Waktu di file jika tersedia; jika tidak, dihitung dari tanggal/jam.</p><p id="serviceImportStatus" class="muted" role="status" aria-live="polite"></p><div id="serviceImportPreview" class="scroll"></div><button id="serviceImportConfirm" class="primary-action" type="button" hidden>Simpan data yang dipratinjau</button><div class="section-title import-report-heading"><div><h3>Rata-rata dari data import per bulan</h3><p class="hint">Laporan Thorax dan keseluruhan, dengan kedua patokan waktu spreadsheet.</p></div></div><div id="serviceImportMonthly" class="scroll"></div>`;
-    serviceView.insertBefore(panel, $('serviceMonthly')?.closest('.module-report') || null);
-    $('serviceImportButton').addEventListener('click', importFile);
-    $('serviceImportConfirm').addEventListener('click', saveImported);
-    renderImportedReport();
-  }
-
   function init() {
-    injectPanel();
-    const serviceView = $('v-waktu');
-    if (serviceView) new MutationObserver(injectPanel).observe(serviceView, { childList: true });
-    document.addEventListener('service-import-complete', () => {
-      if ($('serviceMonthly')) $('serviceStatus').textContent = 'Data import sudah disimpan. Laporan import terpisah menampilkan rata-rata Thorax dan keseluruhan.';
-    });
+    if (!$('serviceImportPanel')) return;
+    ensureReportHost();
+    $('serviceImportFile').addEventListener('change', readSelectedFile);
+    $('serviceImportButton').addEventListener('click', readSelectedFile);
+    $('serviceImportConfirm').addEventListener('click', savePreview);
+    renderMonthly();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
