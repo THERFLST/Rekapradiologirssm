@@ -6,9 +6,10 @@
   <meta name="theme-color" content="#f3f6f8">
   <meta name="description" content="Rekap jumlah pasien dan pemeriksaan radiologi.">
   <title>Rekap Pasien Radiologi</title>
-  <link rel="stylesheet" href="./styles.css?v=v3">
+  <link rel="stylesheet" href="./styles.css?v=v4">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
-  <script src="./app.js?v=v3" defer></script>
+  <script src="./app.js?v=v4" defer></script>
+  <script src="./total.js?v=v1" defer></script>
 </head>
 <body>
   <main class="shell">
@@ -17,15 +18,20 @@
       <nav class="nav" aria-label="Menu utama">
         <button type="button" data-view="isi">Isi Data</button>
         <button type="button" data-view="rekap">Lihat Rekapan</button>
+        <button type="button" data-view="total">Total</button>
         <button type="button" data-view="export">Export</button>
       </nav>
     </header>
-    <aside class="notice"><strong>Prototype publik:</strong> data hanya tersimpan di browser ini dan kode web dapat dilihat publik. Jangan masukkan data pasien atau informasi rahasia.</aside>
 
     <section id="v-isi" class="view panel">
-      <div class="section-title"><div><p class="eyebrow">Menu 1</p><h2>Isi Data</h2><p id="caption" class="muted"></p></div>
-        <div class="date-nav"><button id="prev" type="button" aria-label="Hari sebelumnya">‹</button><label>Tanggal<input id="date" type="date"></label><button id="next" type="button" aria-label="Hari berikutnya">›</button></div></div>
-      <div class="form-grid"><section><h3>Asal pasien</h3><div id="origins" class="fields"></div></section><section><h3>Penjamin</h3><p class="hint">Naker hanya keterangan, tidak dihitung dalam total penjamin.</p><div id="payers" class="fields"></div></section></div>
+      <div class="section-title">
+        <div><p class="eyebrow">Menu 1</p><h2>Isi Data</h2><p id="caption" class="muted"></p></div>
+        <div class="date-nav"><button id="prev" type="button" aria-label="Hari sebelumnya">‹</button><label>Tanggal<input id="date" type="date"></label><button id="next" type="button" aria-label="Hari berikutnya">›</button></div>
+      </div>
+      <div class="form-grid">
+        <section><h3>Asal pasien</h3><div id="origins" class="fields"></div></section>
+        <section><h3>Penjamin</h3><p class="hint">Naker hanya keterangan, tidak dihitung dalam total penjamin.</p><div id="payers" class="fields"></div></section>
+      </div>
       <section class="exam-section"><h3>Jenis pemeriksaan</h3><p class="hint">Nilai kosong dianggap 0. Ekspose harus sama dengan atau lebih besar dari pasien.</p><div id="exams"></div></section>
       <div class="daily-summary"><span>Kunjungan <b id="dayVisits">-</b></span><span>Pemeriksaan <b id="dayExams">-</b></span><span>Ekspose <b id="dayExposure">-</b></span><span>Status <b id="dayStatus">OK</b></span></div>
       <div id="errors" class="errors" aria-live="polite"></div>
@@ -37,8 +43,13 @@
       <div id="rekapOut"></div>
     </section>
 
+    <section id="v-total" class="view panel">
+      <div class="section-title"><div><p class="eyebrow">Ringkasan keseluruhan</p><h2>Total</h2><p class="muted">Akumulasi seluruh data yang tersimpan di browser ini.</p></div></div>
+      <div id="totalOut" class="cards" aria-live="polite"></div>
+    </section>
+
     <section id="v-export" class="view panel">
-      <div class="section-title"><div><p class="eyebrow">Menu 3</p><h2>Export</h2></div></div>
+      <div class="section-title"><div><p class="eyebrow">Menu 4</p><h2>Export</h2></div></div>
       <div id="expCtl" class="ctl"></div>
       <p id="expInfo" class="muted"></p>
       <div class="export-opts">
