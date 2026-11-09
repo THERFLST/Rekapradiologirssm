@@ -47,3 +47,4 @@
 .service-period-filter button:disabled{opacity:.45;cursor:not-allowed}
 .service-data-table{min-width:1120px}
 @media(max-width:640px){.service-period-filter{align-items:stretch;flex-direction:column}.service-period-filter label{min-width:0}.service-period-filter button{width:100%}}
+.service-pdf-fallback{display:inline-block;margin-left:4px;color:#17677d;font-weight:700;text-decoration:underline}

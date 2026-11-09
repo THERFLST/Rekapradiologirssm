@@ -17,12 +17,18 @@
   const fmtDateTime = (date) => date ? `${fmtDate(date)} ${fmtTime(date)}` : '—';
   const dateKey = (date) => date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` : '';
 
+  // Cari kolom secara persis dulu. Pencocokan sebagian hanya untuk frasa multi-kata,
+  // supaya kata tunggal seperti "Registrasi" tidak salah mengenali kolom "No Registrasi".
   function findColumn(headers, names) {
     const candidates = names.map(normalize);
-    return headers.findIndex((header) => {
-      const value = normalize(header);
-      return candidates.some((candidate) => value === candidate || (candidate.length >= 9 && value.includes(candidate)));
-    });
+    const values = headers.map(normalize);
+    for (const candidate of candidates) {
+      const index = values.indexOf(candidate);
+      if (index >= 0) return index;
+    }
+    // Pencocokan sebagian untuk nama kolom yang lebih panjang (mis. "Pemeriksaan Radiologi"),
+    // kecuali kolom nomor seperti "No Registrasi" agar tidak salah dikenali sebagai tanggal.
+    return values.findIndex((value) => !/^no\b/.test(value) && candidates.some((candidate) => candidate.length >= 9 && value.includes(candidate)));
   }
 
   function findHeaderRow(rows) {
@@ -38,15 +44,22 @@
   function excelDate(value) {
     if (value instanceof Date && Number.isFinite(value.getTime())) return value;
     if (typeof value === 'number' && window.XLSX?.SSF) {
+      if (value < 20000 || value > 80000) return null;
       const parsed = XLSX.SSF.parse_date_code(value);
       if (parsed) return new Date(parsed.y, parsed.m - 1, parsed.d, parsed.H || 0, parsed.M || 0, Math.floor(parsed.S || 0));
     }
     const text = String(value ?? '').trim();
     if (!text) return null;
-    const dmy = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
-    if (dmy) {
-      const [, day, month, year, hour = '0', minute = '0', second = '0'] = dmy;
-      const result = new Date(+year, +month - 1, +day, +hour, +minute, +second);
+    // Format sumber: 8/28/2026 (bulan/hari/tahun) dan 27-08-2026 (hari-bulan-tahun).
+    const parts = text.match(/^(\d{1,2})([/-])(\d{1,2})\2(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (parts) {
+      const [, first, separator, second, year, hour = '0', minute = '0', second2 = '0'] = parts;
+      let day = +first, month = +second;
+      if (separator === '/') {
+        if (+first > 12) { day = +first; month = +second; }
+        else { month = +first; day = +second; }
+      }
+      const result = new Date(+year, month - 1, day, +hour, +minute, +second2);
       return Number.isNaN(result.getTime()) ? null : result;
     }
     const result = new Date(text);
@@ -145,7 +158,8 @@
       const page = await pdf.getPage(pageNo);
       const content = await page.getTextContent();
       const items = content.items.filter((item) => item.str && item.str.trim()).map((item) => ({
-        text: item.str.trim(), x: item.transform[4], y: item.transform[5]
+        text: item.str.trim(), x: item.transform[4], y: item.transform[5],
+        right: item.transform[4] + (item.width || item.str.trim().length * 2)
       })).sort((a, b) => b.y - a.y || a.x - b.x);
       const lines = [];
       items.forEach((item) => {
@@ -159,8 +173,8 @@
         line.items.forEach((item) => {
           const previous = cells[cells.length - 1];
           const gap = previous ? item.x - previous.right : Infinity;
-          if (previous && gap <= 5) { previous.text += ` ${item.text}`; previous.right = Math.max(previous.right, item.x + item.text.length * 2); }
-          else cells.push({ text: item.text, right: item.x + item.text.length * 2 });
+          if (previous && gap <= 5) { previous.text += ` ${item.text}`; previous.right = Math.max(previous.right, item.right); }
+          else cells.push({ text: item.text, right: item.right });
         });
         allRows.push(cells.map((cell) => cell.text));
       });
@@ -168,10 +182,80 @@
     return allRows;
   }
 
+  // Membaca setiap baris PDF berdasarkan pola isinya (lima tanggal-jam, dua durasi, keterangan),
+  // bukan posisi kolom. Ini tahan terhadap header yang terpotong dan kolom No yang menyatu dengan No. RM.
+  const DATETIME_RE = /\d{1,2}\/\d{1,2}\/\d{4}\s+\d{1,2}:\d{2}(?::\d{2})?|\d{1,2}-\d{1,2}-\d{4}\s+\d{1,2}:\d{2}(?::\d{2})?/g;
+  const RECORD_START_RE = /^\d{1,4}\s+(?:\d{2}-\d{2}-\d{2}(?:-\d{2})?\s+)?.*\b\d{10}\b/;
+
+  // Satu baris data PDF -> satu record. Mengembalikan null bila pola tidak lengkap.
+  function parsePdfRecordLine(line, number) {
+    const dateMatches = [...line.matchAll(DATETIME_RE)];
+    if (dateMatches.length < 2) return null;
+    const head = line.slice(0, dateMatches[0].index).trim();
+    const regMatch = head.match(/\b(\d{10})\b/);
+    if (!regMatch) return null;
+    const left = head.slice(0, regMatch.index).trim();
+    const afterReg = head.slice(regMatch.index + regMatch[0].length).trim();
+    const numberMatch = left.match(/^(\d{1,4})\s+/);
+    const withoutNumber = numberMatch ? left.slice(numberMatch[0].length) : left;
+    const rmMatch = withoutNumber.match(/^(\d{2}-\d{2}-\d{2}(?:-\d{2})?)\s+/);
+    const medicalRecord = rmMatch ? rmMatch[1] : '';
+    const patient = rmMatch ? withoutNumber.slice(rmMatch[0].length).trim() : withoutNumber;
+    const examIndex = afterReg.search(/-?\s*Thorax/i);
+    const department = examIndex >= 0 ? afterReg.slice(0, examIndex).trim() : afterReg;
+    const exam = examIndex >= 0 ? afterReg.slice(examIndex).replace(/^-\s*/, '').trim() : 'Thorax';
+    const dates = dateMatches.slice(0, 5).map((m) => excelDate(m[0]));
+    const [registrationDate, inputDate, billingDate, arrivalDate, completionDate] = [0, 1, 2, 3, 4].map((i) => dates[i] || null);
+    const tail = line.slice(dateMatches[Math.min(4, dateMatches.length - 1)].index + dateMatches[Math.min(4, dateMatches.length - 1)][0].length);
+    const durations = [...tail.matchAll(/\d{1,3}:\d{2}:\d{2}/g)].map((m) => excelTimeMinutes(m[0]));
+    const billingMinutes = durations[0] ?? null;
+    const arrivalMinutes = durations[1] ?? null;
+    const categoryText = (tail.match(/Kurang dari 8 Jam|Lebih dari 8 Jam|Data Tidak Lengkap/i) || [''])[0];
+    const status = /data tidak lengkap/i.test(categoryText) || !arrivalDate || arrivalMinutes == null
+      ? 'Data Tidak Lengkap'
+      : /kurang dari 8 jam/i.test(categoryText) ? 'Kurang dari 8 Jam'
+        : /lebih dari 8 jam/i.test(categoryText) ? 'Lebih dari 8 Jam'
+          : arrivalMinutes < 480 ? 'Kurang dari 8 Jam' : 'Lebih dari 8 Jam';
+    return {
+      number, patient, medicalRecord, registrationNumber: regMatch[1],
+      department, exam, isThorax: /thorax/i.test(exam), registrationDate, inputDate, billingDate,
+      arrivalDate, completionDate, billingMinutes, arrivalMinutes, status, sheetName: 'PDF'
+    };
+  }
+
+  // Menggabungkan baris PDF yang terpotong (nama/departemen panjang) lalu membaca setiap record.
+  // Baris yang tampak seperti data tetapi tidak bisa dibaca dihitung agar tidak terlewat diam-diam.
+  function parsePdfTextRows(rows) {
+    const lines = rows.map((cells) => cells.map((cell) => String(cell ?? '').trim()).filter(Boolean).join(' ')).filter(Boolean);
+    const groups = [];
+    lines.forEach((line) => {
+      if (RECORD_START_RE.test(line)) { groups.push(line); return; }
+      const last = groups.length ? groups[groups.length - 1] : null;
+      const lastIsOpen = last && RECORD_START_RE.test(last) && [...last.matchAll(DATETIME_RE)].length < 5;
+      if (lastIsOpen) groups[groups.length - 1] = `${last} ${line}`;
+    });
+    const records = [];
+    let unparsed = 0;
+    groups.forEach((line) => {
+      const number = records.length + unparsed + 1;
+      const record = RECORD_START_RE.test(line) ? parsePdfRecordLine(line, Number(line.match(/^\d+/)[0])) : null;
+      if (record) records.push({ ...record, rowNumber: number });
+      else unparsed += 1;
+    });
+    return { records, unparsed };
+  }
+
   function buildReportFromRows(rows, fileName) {
-    const parsed = parseSheet(rows, fileName);
-    if (!parsed || !parsed.records.length) throw new Error('Format PDF belum dikenali. Pastikan PDF berisi tabel dengan kolom Pemeriksaan, Waktu Kedatangan, dan Waktu Selesai. PDF hasil scan/foto belum didukung.');
-    return finalizeReport([{ sheetName: fileName, records: parsed.records }], [fileName]);
+    let { records, unparsed } = parsePdfTextRows(rows);
+    if (!records.length) {
+      const parsed = parseSheet(rows, fileName);
+      records = parsed ? parsed.records : [];
+      unparsed = 0;
+    }
+    if (!records.length) throw new Error('Format PDF belum dikenali. Pastikan PDF berisi tabel data pemeriksaan dengan kolom Waktu Registrasi, Waktu Kedatangan, dan Waktu Selesai. PDF hasil scan/foto belum didukung.');
+    const report = finalizeReport([{ sheetName: fileName, records }], [fileName]);
+    report.unparsedRows = unparsed;
+    return report;
   }
 
   function finalizeReport(parsedSheets, sheetNames) {
@@ -198,6 +282,21 @@
     return finalizeReport(parsedSheets, workbook.SheetNames);
   }
 
+  // Bulan yang ada di file (berdasarkan tanggal registrasi, atau tanggal lain bila kosong), urut terbanyak.
+  function monthsInRecords(records) {
+    const counts = new Map();
+    records.forEach((record) => {
+      const reference = record.registrationDate || record.arrivalDate || record.completionDate;
+      if (!reference) return;
+      const key = dateKey(reference).slice(0, 7);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([key, count]) => {
+      const [year, month] = key.split('-').map(Number);
+      return { key, count, label: `${MONTHS[month - 1]} ${year}` };
+    });
+  }
+
   function filterPeriod(report) {
     const period = $('servicePeriod')?.value || '';
     if (period && !/^\d{4}-\d{2}$/.test(period)) throw new Error('Pilih periode bulan dan tahun yang valid.');
@@ -212,7 +311,14 @@
     };
     const allRecords = report.allRecords.filter(inPeriod);
     const records = allRecords.filter((record) => record.isThorax);
-    if (!allRecords.length) throw new Error(`Tidak ada data pemeriksaan pada periode ${period || 'yang dipilih'}.`);
+    if (!allRecords.length) {
+      const months = monthsInRecords(report.allRecords);
+      const undated = report.allRecords.filter((record) => !record.registrationDate && !record.arrivalDate && !record.completionDate).length;
+      let message = `Tidak ada data pemeriksaan pada periode ${period ? `${MONTHS[Number(period.slice(5, 7)) - 1]} ${period.slice(0, 4)}` : 'yang dipilih'}.`;
+      if (months.length) message += ` Data dalam file ada pada: ${months.map((m) => `${m.label} (${fmtNumber(m.count)} baris)`).join(', ')}. Pilih periode tersebut.`;
+      if (undated) message += ` ${fmtNumber(undated)} baris tidak memiliki tanggal yang terbaca. Jika file berisi rumus, buka file di Excel, simpan ulang agar nilai rumus tersimpan, lalu unggah ulang.`;
+      throw new Error(message);
+    }
     const complete = records.filter((record) => record.status !== 'Data Tidak Lengkap' && Number.isFinite(record.arrivalMinutes));
     const under = complete.filter((record) => record.arrivalMinutes < 480).length;
     const over = complete.length - under;
@@ -287,7 +393,6 @@
     const status = $('serviceImportStatus');
     const result = $('serviceReportResult');
     if (!file) return;
-    if (!$('servicePeriod')?.value) { status.textContent = 'Pilih periode bulan dan tahun terlebih dahulu sebelum mengunggah file.'; $('serviceImportFile').value = ''; return; }
     result.hidden = true; $('serviceReportContent').replaceChildren(); $('serviceDownloadPdf').disabled = true;
     $('serviceCurrentReport')._report = null;
     status.textContent = `Membaca seluruh isi ${file.name}…`;
@@ -303,9 +408,16 @@
       }
       $('serviceCurrentReport')._report = report;
       $('serviceCurrentReport')._fileName = file.name;
+      // Jika periode belum dipilih, pakai bulan terbanyak yang ada di file.
+      const periodInput = $('servicePeriod');
+      if (!periodInput.value) {
+        const months = monthsInRecords(report.allRecords);
+        if (months.length) periodInput.value = months[0].key;
+      }
       const filtered = filterPeriod(report);
       renderReport(filtered, file.name);
-      status.textContent = `Selesai. ${fmtNumber(filtered.allRecords.length)} data pemeriksaan berhasil dibaca dan laporan dibuat otomatis.`;
+      const unparsedNote = report.unparsedRows ? ` Peringatan: ${fmtNumber(report.unparsedRows)} baris tampak seperti data tetapi tidak terbaca; periksa file sumber.` : '';
+      status.textContent = `Selesai. ${fmtNumber(filtered.allRecords.length)} data pemeriksaan berhasil dibaca dan laporan dibuat otomatis.${unparsedNote}`;
       result.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (error) {
       status.textContent = error instanceof Error ? error.message : 'File gagal dibaca. Periksa format file.';
@@ -405,8 +517,13 @@
         link.href = blobUrl; link.download = outputName; link.rel = 'noopener';
         document.body.appendChild(link); link.click(); link.remove();
       }
-      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-      status.textContent = downloadMessage;
+      // Tautan cadangan: jika unduhan otomatis diblokir browser, pengguna tetap bisa mengunduh.
+      const fallback = document.createElement('a');
+      fallback.href = blobUrl; fallback.download = outputName; fallback.rel = 'noopener';
+      fallback.textContent = 'Klik di sini untuk mengunduh PDF';
+      fallback.className = 'service-pdf-fallback';
+      status.replaceChildren(document.createTextNode(`${downloadMessage} `), fallback);
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 10 * 60 * 1000);
     } catch (error) {
       console.error('Gagal membuat PDF waktu pelayanan:', error);
       status.textContent = `Gagal membuat PDF: ${error?.message || 'Terjadi kesalahan tidak diketahui'}. Coba muat ulang halaman dan ulangi.`;
@@ -420,13 +537,6 @@
     // Hindari disabled dinamis pada input file di dalam label karena beberapa
     // browser mobile tidak membuka file picker setelah statusnya diubah.
     input.disabled = false;
-    input.addEventListener('click', (event) => {
-      if (!periodInput?.value) {
-        event.preventDefault();
-        $('serviceImportStatus').textContent = 'Pilih periode bulan dan tahun terlebih dahulu sebelum mengunggah file.';
-        periodInput?.focus();
-      }
-    });
     input.addEventListener('change', () => handleFile(input.files?.[0]));
     if (periodInput) {
       periodInput.value = '';
