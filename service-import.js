@@ -14,6 +14,7 @@
   };
   const fmtDate = (date) => date ? date.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
   const fmtTime = (date) => date ? date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '—';
+  const fmtDateTime = (date) => date ? `${fmtDate(date)} ${fmtTime(date)}` : '—';
   const dateKey = (date) => date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` : '';
 
   function findColumn(headers, names) {
@@ -72,10 +73,13 @@
     const headers = rows[headerRow];
     const col = {
       number: findColumn(headers, ['No', 'Nomor']),
+      medicalRecord: findColumn(headers, ['No RM', 'Nomor RM', 'No. RM', 'Rekam Medis']),
       patient: findColumn(headers, ['Nama Pasien', 'Nama Lengkap', 'Nama']),
+      registrationNumber: findColumn(headers, ['No Registrasi', 'No. Registrasi', 'Nomor Registrasi']),
       department: findColumn(headers, ['Departemen', 'Asal Pasien', 'Poliklinik', 'Unit Asal']),
       exam: findColumn(headers, ['Jenis Pemeriksaan', 'Nama Pemeriksaan', 'Pemeriksaan']),
       registration: findColumn(headers, ['Waktu Registrasi', 'Tanggal Registrasi', 'Registrasi']),
+      inputDate: findColumn(headers, ['Waktu Input', 'Tanggal Input']),
       billing: findColumn(headers, ['Konfirmasi Billing', 'Waktu Konfirmasi Billing', 'Tanggal Billing']),
       arrival: findColumn(headers, ['Waktu Kedatangan', 'Tanggal Kedatangan', 'Jam Kedatangan']),
       completion: findColumn(headers, ['Waktu Selesai', 'Tanggal Selesai', 'Jam Selesai']),
@@ -96,8 +100,11 @@
       let department = col.department >= 0 ? String(row[col.department] ?? '').trim() : '';
       if (department) previousDepartment = department; else department = previousDepartment;
       const patientValue = col.patient >= 0 ? String(row[col.patient] ?? '').trim() : '';
+      const medicalRecord = col.medicalRecord >= 0 ? String(row[col.medicalRecord] ?? '').trim() : '';
+      const registrationNumber = col.registrationNumber >= 0 ? String(row[col.registrationNumber] ?? '').trim() : '';
       const arrivalDate = col.arrival >= 0 ? excelDate(row[col.arrival]) : null;
       const registrationDate = col.registration >= 0 ? excelDate(row[col.registration]) : null;
+      const inputDate = col.inputDate >= 0 ? excelDate(row[col.inputDate]) : null;
       const completionDate = col.completion >= 0 ? excelDate(row[col.completion]) : null;
       const billingDate = col.billing >= 0 ? excelDate(row[col.billing]) : null;
       let billingMinutes = col.billingDiff >= 0 ? excelTimeMinutes(row[col.billingDiff]) : null;
@@ -117,9 +124,9 @@
       records.push({
         rowNumber: headerRow + index + 2,
         number: col.number >= 0 ? row[col.number] : records.length + 1,
-        patient: patientValue,
+        patient: patientValue, medicalRecord, registrationNumber,
         department,
-        exam, isThorax, registrationDate, billingDate, arrivalDate, completionDate,
+        exam, isThorax, registrationDate, inputDate, billingDate, arrivalDate, completionDate,
         billingMinutes, arrivalMinutes, status, sheetName
       });
     });
@@ -305,41 +312,107 @@
   function downloadPdf() {
     const report = $('serviceCurrentReport')?._report;
     const fileName = $('serviceCurrentReport')?._fileName || 'laporan-waktu-pelayanan';
-    if (!report) return;
-    if (!$('servicePeriod')?.value) { $('serviceImportStatus').textContent = 'Pilih bulan dan tahun periode laporan terlebih dahulu sebelum mengunduh PDF.'; $('servicePeriod')?.focus(); return; }
-    if (!window.jspdf?.jsPDF) { $('serviceImportStatus').textContent = 'Generator PDF belum siap. Muat ulang halaman dan coba kembali.'; return; }
+    const status = $('serviceImportStatus');
+    if (!report) { status.textContent = 'Unggah file Excel atau PDF terlebih dahulu.'; return; }
+    if (!$('servicePeriod')?.value) { status.textContent = 'Pilih bulan dan tahun periode laporan terlebih dahulu sebelum mengunduh PDF.'; $('servicePeriod')?.focus(); return; }
+    if (!window.jspdf?.jsPDF) { status.textContent = 'Generator PDF belum siap. Periksa koneksi internet, muat ulang halaman, lalu coba kembali.'; return; }
     let filtered;
-    try { filtered = filterPeriod(report); } catch (error) { $('serviceImportStatus').textContent = error.message; return; }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const margin = 14;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
-    doc.text('RUMAH SAKIT SETIA MITRA', 148, 16, { align: 'center' });
-    doc.setFontSize(11); doc.text('INSTALASI RADIOLOGI', 148, 22, { align: 'center' });
-    doc.setFontSize(13); doc.text('LAPORAN WAKTU TUNGGU HASIL PELAYANAN FOTO THORAX', 148, 31, { align: 'center' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.text(`Periode: ${filtered.rangeLabel}`, margin, 41);
-    doc.autoTable({ startY: 47, head: [['Indikator', 'Hasil']], body: [['Jumlah foto Thorax < 8 jam', fmtNumber(filtered.under)], ['Jumlah foto Thorax ≥ 8 jam', fmtNumber(filtered.over)], ['Total foto Thorax', fmtNumber(filtered.records.length)], ['Data tidak lengkap', fmtNumber(filtered.incomplete)], ['Persentase < 8 jam (data lengkap)', `${(filtered.percent * 100).toFixed(1)}%`], ['Rata-rata waktu pelayanan', fmtDuration(filtered.average)]], theme: 'grid', styles: { fontSize: 9, cellPadding: 2.5 }, headStyles: { fillColor: [31, 79, 91] } });
-    let y = (doc.lastAutoTable?.finalY || 90) + 9;
-    doc.setFont('helvetica', 'bold'); doc.text('Evaluasi', margin, y); y += 6;
-    doc.setFont('helvetica', 'normal');
-    const evaluation = `Pada periode ${filtered.rangeLabel}, terdapat ${filtered.over} pasien (${(filtered.overPercent * 100).toFixed(1)}%) yang mencapai atau melebihi standar waktu tunggu 8 jam. Rata-rata waktu pelayanan foto Thorax adalah ${fmtDuration(filtered.average)}. Hasil ini menjadi bahan evaluasi alur pelayanan, ketersediaan dokter spesialis radiologi, dan faktor operasional.`;
-    const lines = doc.splitTextToSize(evaluation, 268); doc.text(lines, margin, y); y += lines.length * 5 + 5;
-    doc.setFont('helvetica', 'bold'); doc.text('Tindak Lanjut', margin, y); y += 6;
-    doc.setFont('helvetica', 'normal'); doc.text(doc.splitTextToSize('Instalasi Radiologi melakukan evaluasi berkesinambungan serta berkoordinasi dengan dokter spesialis radiologi dan pihak terkait untuk meningkatkan mutu waktu tunggu hasil pelayanan.', 268), margin, y);
+    try { filtered = filterPeriod(report); } catch (error) { status.textContent = error.message; return; }
 
-    // Required PDF order: main report -> recap -> complete examination data.
-    doc.addPage('a4', 'landscape');
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.text('REKAPITULASI PEMERIKSAAN', margin, 16);
-    doc.autoTable({ startY: 22, head: [['Jenis Pemeriksaan', 'Total', '< 8 Jam', '≥ 8 Jam', 'Tidak Lengkap']], body: summaryRows(filtered).map((item) => [item.exam, item.total, item.under, item.over, item.incomplete]), theme: 'grid', styles: { fontSize: 8, cellPadding: 2 }, headStyles: { fillColor: [31, 79, 91] } });
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+      if (typeof doc.autoTable !== 'function') throw new Error('Komponen tabel PDF belum termuat. Muat ulang halaman dan coba kembali.');
+      const margin = 17;
+      const pageWidth = 210;
+      const center = pageWidth / 2;
+      const isIOSBrowser = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      // Reserve a preview tab during the original click gesture; iOS may block
+      // opening a new tab after PDF generation has completed.
+      const iosPreviewWindow = isIOSBrowser ? window.open('about:blank', '_blank') : null;
+      const reportDate = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+      const fmtClock = (date) => date ? fmtTime(date) : '—';
+      const totalThorax = filtered.records.length;
+      const completeCount = filtered.complete.length;
+      const latePercent = completeCount ? (filtered.over / completeCount) * 100 : 0;
+      const averageText = fmtDuration(filtered.average);
 
-    doc.addPage('a4', 'landscape');
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.text('SELURUH DATA PEMERIKSAAN', margin, 16);
-    doc.autoTable({ startY: 22, head: [['No', 'Nama Pasien', 'Tanggal', 'Departemen', 'Pemeriksaan', 'Kedatangan', 'Selesai', 'Durasi', 'Keterangan']], body: filtered.allRecords.map((record, index) => [index + 1, record.patient || '—', fmtDate(record.arrivalDate || record.registrationDate || record.completionDate), record.department || '—', record.exam, fmtTime(record.arrivalDate), fmtTime(record.completionDate), fmtDuration(record.arrivalMinutes), record.status]), theme: 'grid', styles: { fontSize: 6.5, cellPadding: 1.5, overflow: 'linebreak', valign: 'middle' }, headStyles: { fillColor: [31, 79, 91] }, showHead: 'everyPage', rowPageBreak: 'avoid', margin: { top: 22, right: 10, bottom: 12, left: 10 }, didDrawPage: (data) => { doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.text(`Periode ${filtered.rangeLabel} | Data ${filtered.allRecords.length} baris | Halaman ${data.pageNumber}`, margin, 200); } });
-    const safeName = fileName.replace(/\.[^.]+$/, '').replace(/[^a-z0-9-_]+/gi, '_');
-    const periodSuffix = filtered.periodKey ? `_${filtered.periodKey}` : '_Seluruh_Periode';
-    doc.save(`Laporan_Waktu_Pelayanan${periodSuffix}_${safeName}.pdf`);
+      // HALAMAN 1 — laporan utama mengikuti susunan contoh laporan RS.
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+      doc.text('RUMAH SAKIT SETIA MITRA', center, 18, { align: 'center' });
+      doc.setFontSize(10); doc.text('INSTALASI RADIOLOGI', center, 24, { align: 'center' });
+      doc.setFontSize(12); doc.text('LAPORAN DAN EVALUASI WAKTU TUNGGU HASIL PELAYANAN FOTO THORAX', center, 36, { align: 'center', maxWidth: 178 });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+      doc.text(`Bulan : ${filtered.rangeLabel}`, margin, 49);
+
+      doc.setFont('helvetica', 'bold'); doc.text('I.  Pemantauan', margin, 61);
+      doc.autoTable({ startY: 66, margin: { left: margin, right: margin }, head: [['No', 'Variabel', 'Jumlah']], body: [
+        ['1', 'Jumlah Foto Thorax dengan Waktu Tunggu < 8 Jam', fmtNumber(filtered.under)],
+        ['2', 'Jumlah Foto Thorax dengan Waktu Tunggu ≥ 8 Jam', fmtNumber(filtered.over)],
+        ['3', `Jumlah Total Foto Thorax Bulan ${filtered.rangeLabel}`, fmtNumber(totalThorax)],
+        ['4', 'Jumlah Data Foto Thorax Tidak Lengkap', fmtNumber(filtered.incomplete)],
+        ['5', 'Prosentase Waktu Tunggu < 8 Jam (dari Data Lengkap)', `${(filtered.percent * 100).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`],
+        ['6', 'Waktu Rata-rata Pelayanan Foto Thorax (Kedatangan-Selesai)', averageText]
+      ], theme: 'grid', styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 2.5, textColor: [20, 20, 20], lineColor: [90, 90, 90], lineWidth: 0.2 }, headStyles: { fillColor: [190, 225, 237], textColor: [20, 20, 20], fontStyle: 'bold', halign: 'center' }, columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 1: { cellWidth: 132 }, 2: { cellWidth: 34, halign: 'center' } } });
+
+      let y = (doc.lastAutoTable?.finalY || 112) + 10;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text('II.  Evaluasi', margin, y); y += 7;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+      const evaluation1 = `Dari hasil pemantauan waktu tunggu pelayanan foto Thorax bulan ${filtered.rangeLabel} di Instalasi Radiologi RS Setia Mitra, didapatkan ${fmtNumber(filtered.over)} pasien (${latePercent.toLocaleString('id-ID', { maximumFractionDigits: 1 })}%) yang mencapai atau melebihi standar waktu tunggu maksimal 8 jam. Waktu rata-rata pelayanan foto Thorax pada bulan ini adalah ${averageText}.`;
+      const evaluation2 = `Hasil rata-rata waktu pelayanan foto Thorax sebesar ${averageText}. Hasil pemantauan ini menjadi bahan evaluasi alur pelayanan, ketersediaan dokter spesialis radiologi yang stand by di unit radiologi pada jam-jam tertentu, serta faktor operasional lainnya.`;
+      const evalLines1 = doc.splitTextToSize(`1.  ${evaluation1}`, 176); doc.text(evalLines1, margin, y); y += evalLines1.length * 4.5 + 5;
+      const evalLines2 = doc.splitTextToSize(`2.  ${evaluation2}`, 176); doc.text(evalLines2, margin, y); y += evalLines2.length * 4.5 + 8;
+      doc.setFont('helvetica', 'bold'); doc.text('III. Tindak Lanjut', margin, y); y += 7;
+      doc.setFont('helvetica', 'normal');
+      const followUp = 'Unit Radiologi akan melakukan evaluasi secara berkesinambungan serta berkoordinasi kembali dengan dokter spesialis radiologi dan pihak terkait dalam meningkatkan mutu waktu tunggu hasil pelayanan foto Thorax di RS Setia Mitra.';
+      const followLines = doc.splitTextToSize(followUp, 176); doc.text(followLines, margin, y);
+      y = Math.min(Math.max(y + followLines.length * 4.5 + 14, 245), 265);
+      doc.text(`Jakarta, ${reportDate}`, 143, y, { align: 'center' });
+      doc.text('Kepala Instalasi Radiologi', 143, y + 7, { align: 'center' });
+      doc.setFont('helvetica', 'bold'); doc.text('Eni Indrawati, Dipl. Rad', 143, y + 27, { align: 'center' });
+
+      // HALAMAN 2 — rekapitulasi, sesuai urutan yang diminta sebelumnya.
+      doc.addPage('a4', 'portrait');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text('REKAPITULASI WAKTU TUNGGU PEMERIKSAAN', margin, 18);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.text(`Instalasi Radiologi RS Setia Mitra | Periode ${filtered.rangeLabel}`, margin, 25);
+      doc.autoTable({ startY: 32, margin: { left: margin, right: margin }, head: [['No', 'Jenis Pemeriksaan', 'Total', '< 8 Jam', '≥ 8 Jam', 'Tidak Lengkap']], body: summaryRows(filtered).map((item, index) => [index + 1, item.exam, item.total, item.under, item.over, item.incomplete]), theme: 'grid', styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' }, headStyles: { fillColor: [190, 225, 237], textColor: [20, 20, 20] }, columnStyles: { 0: { cellWidth: 10 }, 1: { cellWidth: 78 }, 2: { halign: 'center' }, 3: { halign: 'center' }, 4: { halign: 'center' }, 5: { halign: 'center' } } });
+
+      // HALAMAN 3 dst. — seluruh data, dengan semua baris berulang di halaman berikutnya.
+      doc.addPage('a4', 'landscape');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.text('DATA WAKTU TUNGGU HASIL PELAYANAN', 148, 12, { align: 'center' });
+      doc.setFontSize(10); doc.text(`PEMERIKSAAN FOTO THORAX ${filtered.rangeLabel.toLocaleUpperCase('id-ID')}`, 148, 18, { align: 'center' });
+      const dataBody = filtered.allRecords.map((record, index) => [
+        index + 1, record.medicalRecord || '—', record.patient || '—', record.registrationNumber || '—',
+        record.department || '—', record.exam || '—', fmtDateTime(record.registrationDate),
+        fmtDateTime(record.inputDate), fmtDateTime(record.billingDate),
+        fmtDateTime(record.arrivalDate), fmtDateTime(record.completionDate),
+        Number.isFinite(record.billingMinutes) ? fmtDuration(record.billingMinutes) : '—',
+        Number.isFinite(record.arrivalMinutes) ? fmtDuration(record.arrivalMinutes) : '—', record.status
+      ]);
+      doc.autoTable({ startY: 23, head: [['No', 'No. RM', 'Nama Pasien', 'No. Registrasi', 'Departemen', 'Pemeriksaan', 'Waktu Registrasi', 'Waktu Input', 'Konfirmasi Billing', 'Waktu Kedatangan', 'Waktu Selesai', 'Selisih Selesai-Konfirmasi', 'Selisih Selesai-Kedatangan', 'Keterangan Waktu Tunggu']], body: dataBody, theme: 'grid', styles: { fontSize: 5.3, cellPadding: 1.1, overflow: 'linebreak', valign: 'middle', lineWidth: 0.1 }, headStyles: { fillColor: [190, 225, 237], textColor: [20, 20, 20], fontStyle: 'bold', halign: 'center' }, columnStyles: { 0: { cellWidth: 7 }, 1: { cellWidth: 17 }, 2: { cellWidth: 29 }, 3: { cellWidth: 18 }, 4: { cellWidth: 29 }, 5: { cellWidth: 15 }, 6: { cellWidth: 18 }, 7: { cellWidth: 18 }, 8: { cellWidth: 18 }, 9: { cellWidth: 20 }, 10: { cellWidth: 20 }, 11: { cellWidth: 17 }, 12: { cellWidth: 17 }, 13: { cellWidth: 19 } }, showHead: 'everyPage', rowPageBreak: 'avoid', margin: { top: 23, right: 7, bottom: 10, left: 7 }, didDrawPage: (data) => { doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.text(`Periode ${filtered.rangeLabel} | Total ${filtered.allRecords.length} baris | Halaman ${data.pageNumber + 2}`, 148, 205, { align: 'center' }); } });
+
+      const safeName = String(fileName).replace(/\.[^.]+$/, '').replace(/[^a-z0-9-_]+/gi, '_');
+      const periodSuffix = filtered.periodKey || 'Periode';
+      const outputName = `Laporan_Waktu_Pelayanan_${periodSuffix}_${safeName}.pdf`;
+      const blob = doc.output('blob');
+      const blobUrl = URL.createObjectURL(blob);
+      let downloadMessage = `PDF berhasil dibuat: ${outputName}. Total data pemeriksaan: ${fmtNumber(filtered.allRecords.length)} baris.`;
+      if (iosPreviewWindow && !iosPreviewWindow.closed) {
+        // iOS Safari/Chrome generally previews PDFs instead of honoring download=.
+        iosPreviewWindow.location.href = blobUrl;
+        downloadMessage = `PDF berhasil dibuat dan dibuka pada tab baru: ${outputName}. Gunakan tombol Bagikan/Simpan pada pratinjau PDF.`;
+      } else {
+        const link = document.createElement('a');
+        link.href = blobUrl; link.download = outputName; link.rel = 'noopener';
+        document.body.appendChild(link); link.click(); link.remove();
+      }
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+      status.textContent = downloadMessage;
+    } catch (error) {
+      console.error('Gagal membuat PDF waktu pelayanan:', error);
+      status.textContent = `Gagal membuat PDF: ${error?.message || 'Terjadi kesalahan tidak diketahui'}. Coba muat ulang halaman dan ulangi.`;
+    }
   }
-
 
   function init() {
     const input = $('serviceImportFile');
