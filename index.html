@@ -10,13 +10,16 @@
   <link rel="stylesheet" href="./modules.css?v=v2">
   <link rel="stylesheet" href="./auth.css?v=v1">
   <link rel="stylesheet" href="./master.css?v=v1">
-  <link rel="stylesheet" href="./service-import.css?v=v2">
+  <link rel="stylesheet" href="./service-import.css?v=v3">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
   <script src="./app.js?v=v3" defer></script>
   <script src="./modules.js?v=v1" defer></script>
   <script src="./auth.js?v=v1" defer></script>
   <script src="./master.js?v=v1" defer></script>
-  <script src="./service-import.js?v=v2" defer></script>
+  <script src="./service-import.js?v=v3" defer></script>
 </head>
 <body class="app-locked">
   <section id="loginScreen" class="login-screen" aria-labelledby="loginTitle" hidden>
@@ -52,7 +55,6 @@
         <button type="button" data-view="export">Export</button>
       </nav>
     </header>
-    <aside class="notice"><strong>Prototype publik:</strong> data hanya tersimpan di browser ini dan kode web dapat dilihat publik. Jangan masukkan data pasien atau informasi rahasia.</aside>
 
     <section id="v-isi" class="view panel">
       <div class="section-title"><div><p class="eyebrow">Rekap Konvensional</p><h2>Isi Data</h2><p id="caption" class="muted"></p></div>
@@ -89,11 +91,17 @@
       <section id="serviceImportPanel" class="service-import-panel">
         <label class="service-upload-zone" for="serviceImportFile">
           <span class="service-upload-icon" aria-hidden="true">↑</span>
-          <strong>Unggah file Excel</strong>
-          <span>Pilih file .xlsx atau .xls yang berisi data pemeriksaan dan, bila tersedia, sheet LAPORAN.</span>
-          <input id="serviceImportFile" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+          <strong>Unggah file Excel atau PDF</strong>
+          <span>Pilih file .xlsx, .xls, atau PDF berisi tabel data pemeriksaan. Data akan dibaca dan laporan dibuat otomatis.</span>
+          <input id="serviceImportFile" type="file" accept=".xlsx,.xls,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
         </label>
+        <div class="service-period-filter" aria-label="Periode laporan">
+          <label for="serviceStartDate">Tanggal mulai<input id="serviceStartDate" type="date"></label>
+          <label for="serviceEndDate">Tanggal akhir<input id="serviceEndDate" type="date"></label>
+          <button id="serviceDownloadPdf" class="secondary" type="button" disabled>Unduh Laporan PDF</button>
+        </div>
         <p id="serviceImportStatus" class="service-import-status" role="status" aria-live="polite">Belum ada file yang diunggah.</p>
+        <span id="serviceCurrentReport" hidden></span>
       </section>
       <section id="serviceReportResult" class="service-report-result" aria-live="polite" hidden>
         <div id="serviceReportContent"></div>

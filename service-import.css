@@ -39,3 +39,11 @@
 .service-status.is-incomplete{background:#f0f1f2;color:#59636a}
 @media(max-width:640px){.service-upload-zone{min-height:170px;padding:20px 14px}.service-stat-grid{grid-template-columns:1fr}.service-formal-heading h3{font-size:14px}.service-report-toolbar{align-items:flex-start;flex-direction:column}}
 @media print{.service-import-panel,.service-report-toolbar,.service-data-footnote{display:none!important}.service-report-result{display:block!important}.service-formal-report{box-shadow:none;border:0;padding:0}.service-table-wrap{max-height:none;overflow:visible}.service-data-table{min-width:0;font-size:9px}.service-data-table th,.service-data-table td{padding:4px}.service-data-table thead th{position:static}}
+
+.service-period-filter{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:16px 0 4px;padding:14px;border:1px solid #dce5e8;border-radius:10px;background:#f8fafb}
+.service-period-filter label{display:flex;flex-direction:column;gap:5px;min-width:160px;color:#526873;font-size:12px;font-weight:650}
+.service-period-filter input{min-height:40px;padding:8px 10px;border:1px solid #d6e0e4;border-radius:8px;background:#fff;color:#203943;font:inherit}
+.service-period-filter button{min-height:40px;padding:9px 16px}
+.service-period-filter button:disabled{opacity:.45;cursor:not-allowed}
+.service-data-table{min-width:1120px}
+@media(max-width:640px){.service-period-filter{align-items:stretch;flex-direction:column}.service-period-filter label{min-width:0}.service-period-filter button{width:100%}}
