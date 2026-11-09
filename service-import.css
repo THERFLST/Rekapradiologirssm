@@ -1,0 +1,9 @@
+/* Spreadsheet import panel for service-time module */
+.service-import-panel{margin:16px 0;padding:16px}
+.service-import-controls{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:12px 0}
+.service-import-controls label{display:flex;flex-direction:column;gap:6px;color:#62727a;font-size:12px;font-weight:650}
+.service-import-controls input[type=file]{max-width:100%;padding:8px;border:1px solid #dfe7ea;border-radius:8px;background:#fff;color:#172b35}
+#serviceImportConfirm{margin:12px 0}
+#serviceImportConfirm[hidden]{display:none}
+.import-report-heading{margin-top:20px}
+@media(max-width:600px){.service-import-controls{align-items:stretch;flex-direction:column}.service-import-controls .primary-action{width:100%}.service-import-panel .scroll{overflow-x:auto}}

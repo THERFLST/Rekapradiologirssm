@@ -10,11 +10,13 @@
   <link rel="stylesheet" href="./modules.css?v=v2">
   <link rel="stylesheet" href="./auth.css?v=v1">
   <link rel="stylesheet" href="./master.css?v=v1">
+  <link rel="stylesheet" href="./service-import.css?v=v1">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
   <script src="./app.js?v=v3" defer></script>
   <script src="./modules.js?v=v1" defer></script>
   <script src="./auth.js?v=v1" defer></script>
   <script src="./master.js?v=v1" defer></script>
+  <script src="./service-import.js?v=v1" defer></script>
 </head>
 <body class="app-locked">
   <section id="loginScreen" class="login-screen" aria-labelledby="loginTitle" hidden>
@@ -92,6 +94,17 @@
         <button id="saveService" class="primary-action" type="button">Catat Waktu</button>
       </div>
       <p id="serviceStatus" class="muted" aria-live="polite"></p>
+      <section id="serviceImportPanel" class="panel service-import-panel">
+        <div class="section-title"><div><h3>Import spreadsheet waktu pelayanan</h3><p class="muted">Membaca .xlsx, .xls, atau .csv. Kolom identitas pasien tidak disimpan.</p></div></div>
+        <div class="service-import-controls">
+          <label for="serviceImportFile">Pilih file Excel/CSV<input id="serviceImportFile" type="file" accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"></label>
+          <button id="serviceImportButton" class="primary-action" type="button">Baca &amp; Pratinjau</button>
+        </div>
+        <p class="hint">Tanggal laporan memakai Waktu Kedatangan (fallback: Waktu Registrasi). Durasi diutamakan dari kolom selisih yang sudah ada di spreadsheet; nama dan No. RM diabaikan.</p>
+        <p id="serviceImportStatus" class="muted" role="status" aria-live="polite"></p>
+        <div id="serviceImportPreview" class="scroll"></div>
+        <button id="serviceImportConfirm" class="primary-action" type="button" hidden>Simpan data yang dipratinjau</button>
+      </section>
       <section class="panel module-report"><div class="section-title"><div><h3>Rata-rata waktu per bulan</h3></div></div><div id="serviceMonthly" class="scroll"></div></section>
       <section class="panel module-report"><div class="section-title"><div><h3>Catatan terbaru</h3></div></div><div id="serviceRecent" class="scroll"></div></section>
     </section>
