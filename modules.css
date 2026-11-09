@@ -27,5 +27,18 @@
 .service-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:10px;align-items:end;margin:16px 0}
 .service-form select{min-width:170px}
 .empty-state{padding:18px;color:#62727a}
-@media(max-width:760px){.main-menu-wrap{margin-left:auto}.usg-fields{grid-template-columns:1fr}.service-form{grid-template-columns:1fr 1fr}.service-form .primary-action{grid-column:1/-1}.module-report .scroll{overflow-x:auto}}
-@media(max-width:480px){.service-form{grid-template-columns:1fr}.service-form .primary-action{grid-column:auto}.module-actions{align-items:flex-start;flex-direction:column}.usg-field{font-size:12px}}
+.usg-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:16px 0}
+.usg-form-grid section{padding:14px;border:1px solid #e2e9ec;border-radius:10px;background:#fff}
+.usg-form-grid h3{margin:0 0 10px;font-size:15px}
+.usg-form-grid .fields{display:grid;gap:8px}
+.usg-form-grid .fields label{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#172b35;font-size:13px}
+.usg-form-grid .fields input,.usg-exam-fields input{width:110px;min-height:38px;padding:8px;border:1px solid #dfe7ea;border-radius:7px;font:inherit}
+.usg-exam-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.usg-exam-fields .exam-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px;border:1px solid #e2e9ec;border-radius:8px;background:#fff}
+.usg-exam-fields .exam-row strong{font-size:13px}
+.usg-exam-fields .exam-row label{display:flex;flex-direction:column;gap:4px;color:#62727a;font-size:11px}
+.usg-daily-nav{display:flex;align-items:end;gap:8px}
+.usg-daily-nav button{min-width:40px;min-height:40px}
+.usg-export-row{display:flex;justify-content:flex-end;margin-top:12px}
+@media(max-width:760px){.main-menu-wrap{margin-left:auto}.usg-form-grid,.usg-exam-fields{grid-template-columns:1fr}.service-form{grid-template-columns:1fr 1fr}.service-form .primary-action{grid-column:1/-1}.module-report .scroll{overflow-x:auto}}
+@media(max-width:480px){.service-form{grid-template-columns:1fr}.service-form .primary-action{grid-column:auto}.module-actions{align-items:flex-start;flex-direction:column}.usg-form-grid .fields input,.usg-exam-fields input{width:96px}}
