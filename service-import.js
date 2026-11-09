@@ -202,10 +202,14 @@
   function filterPeriod(report) {
     const period = $('servicePeriod')?.value || '';
     if (period && !/^\d{4}-\d{2}$/.test(period)) throw new Error('Pilih periode bulan dan tahun yang valid.');
+    // Periode laporan mengikuti tanggal registrasi/order, bukan tanggal selesai.
+    // Pada data RS, pemeriksaan yang diregistrasi di akhir bulan dapat selesai
+    // pada bulan berikutnya; memakai tanggal kedatangan/selesai lebih dahulu
+    // membuat banyak baris sah terbuang dari laporan bulan asalnya.
     const inPeriod = (record) => {
-      const date = record.arrivalDate || record.registrationDate || record.completionDate;
-      const key = dateKey(date);
-      return !period || (key && key.slice(0, 7) === period);
+      const dates = [record.registrationDate, record.arrivalDate, record.completionDate].filter(Boolean);
+      if (!period) return true;
+      return dates.some((date) => dateKey(date).slice(0, 7) === period);
     };
     const allRecords = report.allRecords.filter(inPeriod);
     const records = allRecords.filter((record) => record.isThorax);
@@ -371,14 +375,9 @@
       doc.text('Kepala Instalasi Radiologi', 143, y + 7, { align: 'center' });
       doc.setFont('helvetica', 'bold'); doc.text('Eni Indrawati, Dipl. Rad', 143, y + 27, { align: 'center' });
 
-      // HALAMAN 2 — rekapitulasi, sesuai urutan yang diminta sebelumnya.
-      doc.addPage('a4', 'portrait');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text('REKAPITULASI WAKTU TUNGGU PEMERIKSAAN', margin, 18);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.text(`Instalasi Radiologi RS Setia Mitra | Periode ${filtered.rangeLabel}`, margin, 25);
-      doc.autoTable({ startY: 32, margin: { left: margin, right: margin }, head: [['No', 'Jenis Pemeriksaan', 'Total', '< 8 Jam', '≥ 8 Jam', 'Tidak Lengkap']], body: summaryRows(filtered).map((item, index) => [index + 1, item.exam, item.total, item.under, item.over, item.incomplete]), theme: 'grid', styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' }, headStyles: { fillColor: [190, 225, 237], textColor: [20, 20, 20] }, columnStyles: { 0: { cellWidth: 10 }, 1: { cellWidth: 78 }, 2: { halign: 'center' }, 3: { halign: 'center' }, 4: { halign: 'center' }, 5: { halign: 'center' } } });
-
-      // HALAMAN 3 dst. — seluruh data, dengan semua baris berulang di halaman berikutnya.
+      // HALAMAN 2 dst. — langsung seluruh data; halaman rekap terpisah dihilangkan.
       doc.addPage('a4', 'landscape');
+      // Seluruh data ditampilkan berurutan dan header tabel diulang pada setiap halaman.
       doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.text('DATA WAKTU TUNGGU HASIL PELAYANAN', 148, 12, { align: 'center' });
       doc.setFontSize(10); doc.text(`PEMERIKSAAN FOTO THORAX ${filtered.rangeLabel.toLocaleUpperCase('id-ID')}`, 148, 18, { align: 'center' });
       const dataBody = filtered.allRecords.map((record, index) => [
@@ -389,7 +388,7 @@
         Number.isFinite(record.billingMinutes) ? fmtDuration(record.billingMinutes) : '—',
         Number.isFinite(record.arrivalMinutes) ? fmtDuration(record.arrivalMinutes) : '—', record.status
       ]);
-      doc.autoTable({ startY: 23, head: [['No', 'No. RM', 'Nama Pasien', 'No. Registrasi', 'Departemen', 'Pemeriksaan', 'Waktu Registrasi', 'Waktu Input', 'Konfirmasi Billing', 'Waktu Kedatangan', 'Waktu Selesai', 'Selisih Selesai-Konfirmasi', 'Selisih Selesai-Kedatangan', 'Keterangan Waktu Tunggu']], body: dataBody, theme: 'grid', styles: { fontSize: 5.3, cellPadding: 1.1, overflow: 'linebreak', valign: 'middle', lineWidth: 0.1 }, headStyles: { fillColor: [190, 225, 237], textColor: [20, 20, 20], fontStyle: 'bold', halign: 'center' }, columnStyles: { 0: { cellWidth: 7 }, 1: { cellWidth: 17 }, 2: { cellWidth: 29 }, 3: { cellWidth: 18 }, 4: { cellWidth: 29 }, 5: { cellWidth: 15 }, 6: { cellWidth: 18 }, 7: { cellWidth: 18 }, 8: { cellWidth: 18 }, 9: { cellWidth: 20 }, 10: { cellWidth: 20 }, 11: { cellWidth: 17 }, 12: { cellWidth: 17 }, 13: { cellWidth: 19 } }, showHead: 'everyPage', rowPageBreak: 'avoid', margin: { top: 23, right: 7, bottom: 10, left: 7 }, didDrawPage: (data) => { doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.text(`Periode ${filtered.rangeLabel} | Total ${filtered.allRecords.length} baris | Halaman ${data.pageNumber + 2}`, 148, 205, { align: 'center' }); } });
+      doc.autoTable({ startY: 23, head: [['No', 'No. RM', 'Nama Pasien', 'No. Registrasi', 'Departemen', 'Pemeriksaan', 'Waktu Registrasi', 'Waktu Input', 'Konfirmasi Billing', 'Waktu Kedatangan', 'Waktu Selesai', 'Selisih Selesai-Konfirmasi', 'Selisih Selesai-Kedatangan', 'Keterangan Waktu Tunggu']], body: dataBody, theme: 'grid', styles: { fontSize: 5.3, cellPadding: 1.1, overflow: 'linebreak', valign: 'middle', lineWidth: 0.1 }, headStyles: { fillColor: [190, 225, 237], textColor: [20, 20, 20], fontStyle: 'bold', halign: 'center' }, columnStyles: { 0: { cellWidth: 7 }, 1: { cellWidth: 17 }, 2: { cellWidth: 29 }, 3: { cellWidth: 18 }, 4: { cellWidth: 29 }, 5: { cellWidth: 15 }, 6: { cellWidth: 18 }, 7: { cellWidth: 18 }, 8: { cellWidth: 18 }, 9: { cellWidth: 20 }, 10: { cellWidth: 20 }, 11: { cellWidth: 17 }, 12: { cellWidth: 17 }, 13: { cellWidth: 19 } }, showHead: 'everyPage', pageBreak: 'auto', rowPageBreak: 'auto', margin: { top: 23, right: 7, bottom: 10, left: 7 }, didDrawPage: (data) => { doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.text(`Periode ${filtered.rangeLabel} | Total ${filtered.allRecords.length} baris | Halaman ${data.pageNumber + 1}`, 148, 205, { align: 'center' }); } });
 
       const safeName = String(fileName).replace(/\.[^.]+$/, '').replace(/[^a-z0-9-_]+/gi, '_');
       const periodSuffix = filtered.periodKey || 'Periode';
