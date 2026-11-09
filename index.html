@@ -3,14 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f3f6f8" />
   <title>Rekap Pasien Radiologi</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <style>body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f6f8;color:#172b35}button,input,select{font:inherit}.hidden{display:none!important}</style>
+  <link rel="stylesheet" href="./styles.css?v=950a224" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-  <script src="app.js" defer></script>
+  <script src="./app.js?v=950a224" defer></script>
 </head>
 <body>
   <div id="loginOverlay" class="modal-overlay">
@@ -18,192 +20,62 @@
       <p class="eyebrow">Akses aplikasi</p>
       <h2>Login Rekap Pasien Radiologi</h2>
       <form id="loginForm">
-        <label class="field-block">
-          <span>Username</span>
-          <input id="usernameInput" type="text" value="admin" />
-        </label>
-        <label class="field-block">
-          <span>Password</span>
-          <input id="passwordInput" type="password" value="admin123" />
-        </label>
+        <label class="field-block"><span>Username</span><input id="usernameInput" type="text" value="admin" /></label>
+        <label class="field-block"><span>Password</span><input id="passwordInput" type="password" value="admin123" /></label>
         <button type="submit" class="primary full">Masuk</button>
       </form>
-      <div class="demo-box">
-        <small>Demo akun</small>
-        <div>Admin: admin / admin123</div>
-        <div>Petugas: petugas / petugas123</div>
-      </div>
+      <div class="demo-box"><small>Demo akun</small><div>Admin: admin / admin123</div><div>Petugas: petugas / petugas123</div></div>
     </div>
   </div>
 
   <div id="mainApp" class="app-shell hidden">
     <header class="topbar">
-      <div>
-        <p class="eyebrow">Instalasi Radiologi</p>
-        <h1>Rekap Pasien Radiologi</h1>
-      </div>
-
+      <div><p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p><h1>Rekap Pasien Radiologi</h1></div>
       <div class="controls">
-        <label>
-          <span>Bulan</span>
-          <select id="monthSelect"></select>
-        </label>
-
-        <label>
-          <span>Tahun</span>
-          <select id="yearSelect"></select>
-        </label>
-
+        <label><span>Bulan</span><select id="monthSelect" aria-label="Bulan"></select></label>
+        <label><span>Tahun</span><select id="yearSelect" aria-label="Tahun"></select></label>
         <div class="action-group">
-          <button id="excelBtn" class="secondary">Excel</button>
-          <button id="pdfBtn" class="secondary">PDF</button>
-          <button id="lockBtn" class="secondary danger">Kunci Bulan</button>
-          <button id="unlockBtn" class="secondary success">Buka Kunci</button>
+          <button id="excelBtn" class="secondary">Excel</button><button id="pdfBtn" class="secondary">PDF</button>
+          <button id="lockBtn" class="secondary danger">Kunci Bulan</button><button id="unlockBtn" class="secondary success">Buka Kunci</button>
           <button id="logoutBtn" class="secondary">Logout</button>
         </div>
       </div>
     </header>
 
     <div class="user-bar">
-      <div class="user-chip">
-        <span class="chip-label">User</span>
-        <strong id="currentUserName">-</strong>
-      </div>
-      <div class="user-chip">
-        <span class="chip-label">Role</span>
-        <strong id="currentUserRole">-</strong>
-      </div>
-      <div class="user-chip">
-        <span class="chip-label">Status bulanan</span>
-        <strong id="monthLockStatus">Terbuka</strong>
-      </div>
+      <div class="user-chip"><span class="chip-label">User</span><strong id="currentUserName">-</strong></div>
+      <div class="user-chip"><span class="chip-label">Role</span><strong id="currentUserRole">-</strong></div>
+      <div class="user-chip"><span class="chip-label">Status bulanan</span><strong id="monthLockStatus">Terbuka</strong></div>
     </div>
 
-    <section class="summary-cards">
-      <div class="card">
-        <span>Kunjungan</span>
-        <strong id="summaryVisits">0</strong>
-      </div>
-      <div class="card">
-        <span>Pemeriksaan</span>
-        <strong id="summaryExams">0</strong>
-      </div>
-      <div class="card">
-        <span>Ekspose</span>
-        <strong id="summaryExpose">0</strong>
-      </div>
+    <section class="summary-cards" aria-label="Ringkasan bulanan">
+      <div class="card"><span>Kunjungan</span><strong id="summaryVisits">0</strong></div>
+      <div class="card"><span>Pemeriksaan</span><strong id="summaryExams">0</strong></div>
+      <div class="card"><span>Ekspose</span><strong id="summaryExpose">0</strong></div>
     </section>
 
-    <section class="daily-check panel">
-      <div class="section-head">
-        <h2>Pengecekan Harian</h2>
-      </div>
-      <div id="dailyIssues" class="issues-box">
-        <p class="muted">Belum ada masalah.</p>
-      </div>
-    </section>
+    <section class="daily-check panel"><div class="section-head"><h2>Pengecekan Harian</h2></div><div id="dailyIssues" class="issues-box"><p class="muted">Belum ada masalah.</p></div></section>
 
     <section class="panel entry-panel">
-      <div class="section-head">
-        <h2>Input Harian</h2>
-        <button id="saveBtn" class="primary">Simpan Bulan</button>
-      </div>
-
-      <div class="date-nav">
-        <button type="button" id="prevDay" class="icon-button" aria-label="Tanggal sebelumnya">‹</button>
-        <label class="date-picker">
-          <span>Tanggal</span>
-          <input id="dateSelect" type="date" />
-        </label>
-        <button type="button" id="nextDay" class="icon-button" aria-label="Tanggal berikutnya">›</button>
-      </div>
-
+      <div class="section-head"><h2>Input Harian</h2><button id="saveBtn" class="primary">Simpan Bulan</button></div>
+      <div class="date-nav"><button type="button" id="prevDay" class="icon-button" aria-label="Tanggal sebelumnya">‹</button><label class="date-picker"><span>Tanggal</span><input id="dateSelect" type="date" /></label><button type="button" id="nextDay" class="icon-button" aria-label="Tanggal berikutnya">›</button></div>
       <div id="dateCaption" class="date-caption"></div>
-
       <form id="dayForm" autocomplete="off">
-        <div class="form-section">
-          <h3>Asal Pasien</h3>
-          <div id="originFields" class="field-grid"></div>
-        </div>
-
-        <div class="form-section">
-          <h3>Penjamin</h3>
-          <p class="hint">Naker hanya sebagai keterangan dan tidak dihitung sebagai penjamin tambahan.</p>
-          <div id="payerFields" class="field-grid"></div>
-        </div>
-
-        <div class="form-section">
-          <h3>Jenis Pemeriksaan</h3>
-          <p class="hint">Isi jumlah pasien dan ekspose per jenis. Kosong diartikan 0.</p>
-          <div id="examFields"></div>
-        </div>
-
-        <div class="daily-totals">
-          <div>
-            <span>Kunjungan</span>
-            <strong id="dayVisits">-</strong>
-          </div>
-          <div>
-            <span>Pemeriksaan</span>
-            <strong id="dayExams">-</strong>
-          </div>
-          <div>
-            <span>Ekspose</span>
-            <strong id="dayExpose">-</strong>
-          </div>
-          <div>
-            <span>Status</span>
-            <strong id="dayStatus" class="status-text ok-text">OK</strong>
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button type="button" id="clearDay" class="button secondary">Kosongkan tanggal ini</button>
-          <span class="hint">Perubahan disimpan otomatis di browser ini.</span>
-        </div>
+        <div class="form-section"><h3>Asal Pasien</h3><div id="originFields" class="field-grid"></div></div>
+        <div class="form-section"><h3>Penjamin</h3><p class="hint">Naker hanya sebagai keterangan dan tidak dihitung sebagai penjamin tambahan.</p><div id="payerFields" class="field-grid"></div></div>
+        <div class="form-section"><h3>Jenis Pemeriksaan</h3><p class="hint">Isi jumlah pasien dan ekspose per jenis. Kosong diartikan 0.</p><div id="examFields"></div></div>
+        <div class="daily-totals"><div><span>Kunjungan</span><strong id="dayVisits">-</strong></div><div><span>Pemeriksaan</span><strong id="dayExams">-</strong></div><div><span>Ekspose</span><strong id="dayExpose">-</strong></div><div><span>Status</span><strong id="dayStatus" class="status-text ok-text">OK</strong></div></div>
+        <div class="form-actions"><button type="button" id="clearDay" class="button secondary">Kosongkan tanggal ini</button><span class="hint">Perubahan disimpan otomatis di browser ini.</span></div>
       </form>
     </section>
 
     <section class="panel summary-panel">
-      <div class="section-head">
-        <h2>Rekap Bulanan</h2>
-      </div>
-
-      <div class="summary-grid">
-        <article class="summary-card">
-          <h3>Asal Pasien</h3>
-          <div id="originSummary"></div>
-        </article>
-
-        <article class="summary-card">
-          <h3>Penjamin</h3>
-          <div id="payerSummary"></div>
-        </article>
-      </div>
-
-      <article class="summary-card exam-summary">
-        <h3>Jenis Pemeriksaan</h3>
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Jenis</th>
-                <th>Pasien</th>
-                <th>Ekspose</th>
-              </tr>
-            </thead>
-            <tbody id="examSummary"></tbody>
-          </table>
-        </div>
-      </article>
+      <div class="section-head"><h2>Rekap Bulanan</h2></div>
+      <div class="summary-grid"><article class="summary-card"><h3>Asal Pasien</h3><div id="originSummary"></div></article><article class="summary-card"><h3>Penjamin</h3><div id="payerSummary"></div></article></div>
+      <article class="summary-card exam-summary"><h3>Jenis Pemeriksaan</h3><div class="table-scroll"><table><thead><tr><th>Jenis</th><th>Pasien</th><th>Ekspose</th></tr></thead><tbody id="examSummary"></tbody></table></div></article>
     </section>
 
-    <section class="panel history-panel">
-      <div class="section-head">
-        <h2>Riwayat Perubahan</h2>
-      </div>
-      <div id="historyList" class="history-list"></div>
-    </section>
+    <section class="panel history-panel"><div class="section-head"><h2>Riwayat Perubahan</h2></div><div id="historyList" class="history-list"></div></section>
   </div>
 </body>
 </html>
