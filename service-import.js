@@ -463,11 +463,11 @@
 
       doc.setFont('helvetica', 'bold'); doc.text('I.  Pemantauan', margin, 61);
       doc.autoTable({ startY: 66, margin: { left: margin, right: margin }, head: [['No', 'Variabel', 'Jumlah']], body: [
-        ['1', 'Jumlah Foto Thorax dengan Waktu Tunggu < 8 Jam', fmtNumber(filtered.under)],
-        ['2', 'Jumlah Foto Thorax dengan Waktu Tunggu ≥ 8 Jam', fmtNumber(filtered.over)],
+        ['1', 'Jumlah Foto Thorax dengan Waktu Tunggu kurang dari 8 Jam', fmtNumber(filtered.under)],
+        ['2', 'Jumlah Foto Thorax dengan Waktu Tunggu 8 Jam atau Lebih', fmtNumber(filtered.over)],
         ['3', `Jumlah Total Foto Thorax Bulan ${filtered.rangeLabel}`, fmtNumber(totalThorax)],
         ['4', 'Jumlah Data Foto Thorax Tidak Lengkap', fmtNumber(filtered.incomplete)],
-        ['5', 'Prosentase Waktu Tunggu < 8 Jam (dari Data Lengkap)', `${(filtered.percent * 100).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`],
+        ['5', 'Persentase Waktu Tunggu kurang dari 8 Jam (dari Data Lengkap)', `${(filtered.percent * 100).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`],
         ['6', 'Waktu Rata-rata Pelayanan Foto Thorax (Kedatangan-Selesai)', averageText]
       ], theme: 'grid', styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 2.5, textColor: [20, 20, 20], lineColor: [90, 90, 90], lineWidth: 0.2 }, headStyles: { fillColor: [190, 225, 237], textColor: [20, 20, 20], fontStyle: 'bold', halign: 'center' }, columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 1: { cellWidth: 132 }, 2: { cellWidth: 34, halign: 'center' } } });
 
@@ -476,8 +476,15 @@
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
       const evaluation1 = `Dari hasil pemantauan waktu tunggu pelayanan foto Thorax bulan ${filtered.rangeLabel} di Instalasi Radiologi RS Setia Mitra, didapatkan ${fmtNumber(filtered.over)} pasien (${latePercent.toLocaleString('id-ID', { maximumFractionDigits: 1 })}%) yang mencapai atau melebihi standar waktu tunggu maksimal 8 jam. Waktu rata-rata pelayanan foto Thorax pada bulan ini adalah ${averageText}.`;
       const evaluation2 = `Hasil rata-rata waktu pelayanan foto Thorax sebesar ${averageText}. Hasil pemantauan ini menjadi bahan evaluasi alur pelayanan, ketersediaan dokter spesialis radiologi yang stand by di unit radiologi pada jam-jam tertentu, serta faktor operasional lainnya.`;
-      const evalLines1 = doc.splitTextToSize(`1.  ${evaluation1}`, 176); doc.text(evalLines1, margin, y); y += evalLines1.length * 4.5 + 5;
-      const evalLines2 = doc.splitTextToSize(`2.  ${evaluation2}`, 176); doc.text(evalLines2, margin, y); y += evalLines2.length * 4.5 + 8;
+      const numbered = (num, text) => {
+        const lines = doc.splitTextToSize(text, 168);
+        doc.text(`${num}.`, margin, y);
+        doc.text(lines, margin + 6, y);
+        y += lines.length * 4.5 + 4;
+      };
+      numbered(1, evaluation1);
+      numbered(2, evaluation2);
+      y += 4;
       doc.setFont('helvetica', 'bold'); doc.text('III. Tindak Lanjut', margin, y); y += 7;
       doc.setFont('helvetica', 'normal');
       const followUp = 'Unit Radiologi akan melakukan evaluasi secara berkesinambungan serta berkoordinasi kembali dengan dokter spesialis radiologi dan pihak terkait dalam meningkatkan mutu waktu tunggu hasil pelayanan foto Thorax di RS Setia Mitra.';
@@ -492,15 +499,34 @@
       // Seluruh data ditampilkan berurutan dan header tabel diulang pada setiap halaman.
       doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.text('DATA WAKTU TUNGGU HASIL PELAYANAN', 148, 12, { align: 'center' });
       doc.setFontSize(10); doc.text(`PEMERIKSAAN FOTO THORAX ${filtered.rangeLabel.toLocaleUpperCase('id-ID')}`, 148, 18, { align: 'center' });
+      // Format ringkas agar setiap baris muat satu baris: dd/mm/yy hh:mm dan durasi "7 jam 05 menit".
+      const pdfDate = (date) => date ? `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getFullYear()).slice(2)} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}` : '-';
+      const pdfDuration = (minutes) => Number.isFinite(minutes) ? fmtDuration(minutes).replace(/^−/, '-') : '-';
       const dataBody = filtered.allRecords.map((record, index) => [
-        index + 1, record.medicalRecord || '—', record.patient || '—', record.registrationNumber || '—',
-        record.department || '—', record.exam || '—', fmtDateTime(record.registrationDate),
-        fmtDateTime(record.inputDate), fmtDateTime(record.billingDate),
-        fmtDateTime(record.arrivalDate), fmtDateTime(record.completionDate),
-        Number.isFinite(record.billingMinutes) ? fmtDuration(record.billingMinutes) : '—',
-        Number.isFinite(record.arrivalMinutes) ? fmtDuration(record.arrivalMinutes) : '—', record.status
+        index + 1, record.medicalRecord || '-', record.patient || '-', record.registrationNumber || '-',
+        record.department || '-', record.exam || '-', pdfDate(record.registrationDate),
+        pdfDate(record.inputDate), pdfDate(record.billingDate), pdfDate(record.arrivalDate), pdfDate(record.completionDate),
+        pdfDuration(record.billingMinutes), pdfDuration(record.arrivalMinutes), record.status
       ]);
-      doc.autoTable({ startY: 23, head: [['No', 'No. RM', 'Nama Pasien', 'No. Registrasi', 'Departemen', 'Pemeriksaan', 'Waktu Registrasi', 'Waktu Input', 'Konfirmasi Billing', 'Waktu Kedatangan', 'Waktu Selesai', 'Selisih Selesai-Konfirmasi', 'Selisih Selesai-Kedatangan', 'Keterangan Waktu Tunggu']], body: dataBody, theme: 'grid', styles: { fontSize: 5.3, cellPadding: 1.1, overflow: 'linebreak', valign: 'middle', lineWidth: 0.1 }, headStyles: { fillColor: [190, 225, 237], textColor: [20, 20, 20], fontStyle: 'bold', halign: 'center' }, columnStyles: { 0: { cellWidth: 7 }, 1: { cellWidth: 17 }, 2: { cellWidth: 29 }, 3: { cellWidth: 18 }, 4: { cellWidth: 29 }, 5: { cellWidth: 15 }, 6: { cellWidth: 18 }, 7: { cellWidth: 18 }, 8: { cellWidth: 18 }, 9: { cellWidth: 20 }, 10: { cellWidth: 20 }, 11: { cellWidth: 17 }, 12: { cellWidth: 17 }, 13: { cellWidth: 19 } }, showHead: 'everyPage', pageBreak: 'auto', rowPageBreak: 'auto', margin: { top: 23, right: 7, bottom: 10, left: 7 }, didDrawPage: (data) => { doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.text(`Periode ${filtered.rangeLabel} | Total ${filtered.allRecords.length} baris | Halaman ${data.pageNumber + 1}`, 148, 205, { align: 'center' }); } });
+      // Lebar kolom total 280 mm (A4 landscape dikurangi margin 8,5 mm kiri dan kanan).
+      const dataColumns = [7, 16, 34, 18, 34, 14, 18, 18, 18, 18, 18, 19, 19, 27];
+      doc.autoTable({
+        startY: 23,
+        head: [['No', 'No. RM', 'Nama Pasien', 'No. Registrasi', 'Departemen', 'Pemeriksaan', 'Waktu Registrasi', 'Waktu Input', 'Konfirmasi Billing', 'Waktu Kedatangan', 'Waktu Selesai', 'Selisih\nSelesai -\nKonfirmasi', 'Selisih\nSelesai -\nKedatangan', 'Keterangan\nWaktu Tunggu']],
+        body: dataBody,
+        theme: 'grid',
+        styles: { font: 'helvetica', fontSize: 5.8, cellPadding: 0.9, overflow: 'linebreak', valign: 'middle', lineWidth: 0.1, textColor: [20, 20, 20], lineColor: [120, 120, 120] },
+        headStyles: { fillColor: [190, 225, 237], textColor: [20, 20, 20], fontStyle: 'bold', halign: 'center', fontSize: 5.6 },
+        columnStyles: Object.fromEntries(dataColumns.map((width, i) => [i, { cellWidth: width, halign: i === 0 || i === 1 || i === 3 || i >= 6 && i <= 10 ? 'center' : 'left' }])),
+        margin: { top: 23, right: 8.5, bottom: 12, left: 8.5 },
+        showHead: 'everyPage',
+        pageBreak: 'auto',
+        rowPageBreak: 'avoid',
+        didDrawPage: (data) => {
+          doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+          doc.text(`Periode ${filtered.rangeLabel} | Total ${filtered.allRecords.length} baris | Halaman ${data.pageNumber + 1}`, 148.5, 205, { align: 'center' });
+        }
+      });
 
       const safeName = String(fileName).replace(/\.[^.]+$/, '').replace(/[^a-z0-9-_]+/gi, '_');
       const periodSuffix = filtered.periodKey || 'Periode';
