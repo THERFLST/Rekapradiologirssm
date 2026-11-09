@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f8fb">
+  <title>Rekap Pasien Radiologi | RS Setia Mitra</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark" aria-hidden="true">R</div><div><p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p><h1>Rekap Pasien Radiologi</h1></div></div>
+    <div class="period-controls">
+      <label>Bulan<select id="monthSelect" aria-label="Pilih bulan"></select></label>
+      <label>Tahun<select id="yearSelect" aria-label="Pilih tahun"></select></label>
+    </div>
+  </header>
+  <main class="container">
+    <div class="notice"><strong>Penyimpanan perangkat ini:</strong> data tersimpan otomatis di browser yang sedang digunakan. Data belum tersinkron ke perangkat lain atau database.</div>
+    <section class="stats" aria-label="Ringkasan total bulanan">
+      <article class="stat-card"><span>Total kunjungan</span><strong id="totalVisits">0</strong></article>
+      <article class="stat-card"><span>Total pemeriksaan</span><strong id="totalExams">0</strong></article>
+      <article class="stat-card"><span>Total ekspose</span><strong id="totalExpose">0</strong></article>
+    </section>
+    <section class="panel check-panel"><div class="section-heading"><div><p class="eyebrow">Kontrol kualitas data</p><h2>Pengecekan harian</h2></div><span class="count-pill" id="issueCount">0 masalah</span></div><div id="dailyChecks" class="checks-list"></div></section>
+    <section class="panel entry-panel">
+      <div class="section-heading"><div><p class="eyebrow">Input data agregat, tanpa identitas pasien</p><h2>Input harian</h2></div><span class="saved-label" id="saveStatus" role="status">Tersimpan otomatis</span></div>
+      <div class="date-nav"><button type="button" class="icon-button" id="prevDay" aria-label="Tanggal sebelumnya">‹</button><label class="date-picker-label">Tanggal<input id="dateSelect" type="date"></label><button type="button" class="icon-button" id="nextDay" aria-label="Tanggal berikutnya">›</button></div>
+      <div class="date-caption" id="dateCaption"></div>
+      <form id="dayForm" autocomplete="off">
+        <div class="form-section"><h3>Asal pasien</h3><div id="originFields" class="field-grid"></div></div>
+        <div class="form-section"><h3>Penjamin</h3><p class="hint">Naker hanya keterangan dan tidak ikut dihitung sebagai penjamin tambahan.</p><div id="payerFields" class="field-grid"></div></div>
+        <div class="form-section"><h3>Jenis pemeriksaan</h3><p class="hint">Isi jumlah pasien dan ekspose untuk tiap jenis. Angka kosong dianggap 0.</p><div id="examFields"></div></div>
+        <div class="daily-totals"><div><span>Kunjungan</span><strong id="dayVisits">-</strong></div><div><span>Pemeriksaan</span><strong id="dayExams">-</strong></div><div><span>Ekspose</span><strong id="dayExpose">-</strong></div><div><span>Status</span><strong id="dayStatus" class="status-text">OK</strong></div></div>
+        <div class="form-actions"><button type="button" class="button secondary" id="clearDay">Kosongkan tanggal ini</button><span class="hint">Perubahan disimpan otomatis di browser ini.</span></div>
+      </form>
+    </section>
+    <section class="panel summary-panel"><div class="section-heading"><div><p class="eyebrow">Akumulasi berdasarkan periode</p><h2>Rekap bulanan</h2></div></div>
+      <div class="summary-grid"><article class="summary-card"><h3>Asal pasien</h3><div id="originSummary"></div></article><article class="summary-card"><h3>Penjamin</h3><div id="payerSummary"></div></article></div>
+      <article class="summary-card exam-summary"><h3>Jenis pemeriksaan</h3><div class="table-scroll"><table><thead><tr><th>Jenis</th><th>Jumlah pasien</th><th>Ekspose</th></tr></thead><tbody id="examSummary"></tbody></table></div></article>
+    </section>
+    <p class="footnote">Aplikasi ini mencatat jumlah agregat saja. Jangan masukkan nama, nomor rekam medis, atau identitas pasien.</p>
+  </main>
+  <footer class="footer">Rekap Pasien Radiologi · RS Setia Mitra</footer>
+</body>
+</html>
