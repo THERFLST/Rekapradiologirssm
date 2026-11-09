@@ -10,7 +10,20 @@
   <script src="./app.js" defer></script>
 </head>
 <body>
-  <main class="app-shell">
+  <div id="loginOverlay" class="modal-overlay hidden">
+    <div class="modal-card">
+      <p class="eyebrow">Akses aplikasi</p>
+      <h2>Login Rekap Pasien Radiologi</h2>
+      <form id="loginForm">
+        <label class="field-block"><span>Username</span><input id="usernameInput" type="text" value="admin" autocomplete="username" /></label>
+        <label class="field-block"><span>Password</span><input id="passwordInput" type="password" autocomplete="current-password" /></label>
+        <button type="submit" class="primary full">Masuk</button>
+      </form>
+      <div class="demo-box"><small>Akun demo</small><div>Admin: admin / admin123</div><div>Petugas: petugas / petugas123</div></div>
+    </div>
+  </div>
+
+  <main id="appShell" class="app-shell hidden">
     <header class="topbar">
       <div>
         <p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p>
@@ -20,8 +33,19 @@
       <div class="period-controls" aria-label="Pilih periode rekap">
         <label>Bulan<select id="monthSelect" aria-label="Pilih bulan"></select></label>
         <label>Tahun<select id="yearSelect" aria-label="Pilih tahun"></select></label>
+        <div class="action-group">
+          <button id="lockBtn" type="button" class="button-danger">Kunci Bulan</button>
+          <button id="unlockBtn" type="button" class="button-success">Buka Kunci</button>
+          <button id="logoutBtn" type="button">Logout</button>
+        </div>
       </div>
     </header>
+
+    <div class="user-bar">
+      <div class="user-chip"><span class="chip-label">User</span><strong id="currentUserName">-</strong></div>
+      <div class="user-chip"><span class="chip-label">Role</span><strong id="currentUserRole">-</strong></div>
+      <div class="user-chip"><span class="chip-label">Status bulan</span><strong id="monthLockStatus">Terbuka</strong></div>
+    </div>
 
     <section class="summary-cards" aria-label="Ringkasan bulanan">
       <article class="card"><span>Total kunjungan</span><strong id="summaryVisits">-</strong></article>
