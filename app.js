@@ -46,19 +46,19 @@
 
   function readStorage(key, fallback) {
     try { const parsed = JSON.parse(localStorage.getItem(key) || 'null'); return parsed ?? fallback; }
-    catch { return fallback; }
+    catch (error) { console.warn(`Tidak dapat membaca ${key}`, error); return fallback; }
   }
   function readSession() {
-    try { return JSON.parse(sessionStorage.getItem(KEYS.session) || 'null'); }
-    catch { return null; }
+    try {
+      const user = JSON.parse(sessionStorage.getItem(KEYS.session) || 'null');
+      return user && ACCOUNTS[user.username]?.role === user.role ? user : null;
+    } catch (error) { console.warn('Sesi login tidak tersedia', error); return null; }
   }
-  function toDateKey(date) {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  }
+  function toDateKey(date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`; }
   function dateFromKey(key) { return new Date(`${key}T12:00:00`); }
   function daysInMonth() { return new Date(state.year, state.month + 1, 0).getDate(); }
-  function periodKey() { return `${state.year}-${String(state.month + 1).padStart(2, '0')}`; }
-  function dayKey(day) { return `${periodKey()}-${String(day).padStart(2, '0')}`; }
+  function periodKey() { return `${state.year}-${String(state.month+1).padStart(2,'0')}`; }
+  function dayKey(day) { return `${periodKey()}-${String(day).padStart(2,'0')}`; }
   function emptyRecord() {
     const record = { source: {}, payer: {}, exams: {} };
     EXAMS.forEach((exam) => { record.exams[exam.key] = { pasien: '', ekspose: '' }; });
@@ -73,18 +73,12 @@
   }
   function store(key, value) {
     try { localStorage.setItem(key, JSON.stringify(value)); return true; }
-    catch (error) { notify('Penyimpanan browser penuh atau tidak tersedia. Unduh backup dan coba lagi.'); return false; }
+    catch (error) { notify('Penyimpanan browser penuh/tidak tersedia. Unduh backup atau kosongkan ruang.'); return false; }
   }
-  function number(value) {
-    if (value === '' || value === null || value === undefined) return 0;
-    const result = Number(value);
-    return Number.isFinite(result) ? result : 0;
-  }
+  function number(value) { if (value === '' || value === null || value === undefined) return 0; const result = Number(value); return Number.isFinite(result) ? result : 0; }
   function displayNumber(value) { return value === 0 ? '-' : Number(value).toLocaleString('id-ID'); }
   function percentage(value, total) { return total ? `${(value * 100 / total).toFixed(1).replace('.', ',')}%` : '0,0%'; }
-  function escapeHtml(value) {
-    return String(value).replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-  }
+  function escapeHtml(value) { return String(value).replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
   function isAdmin() { return state.user?.username === 'admin'; }
   function monthLocked() { return Boolean(state.locks[periodKey()]?.locked); }
   function mayEdit() { return Boolean(state.user) && (isAdmin() || !monthLocked()); }
@@ -94,7 +88,7 @@
     if (!toast) { toast = document.createElement('div'); toast.className = 'toast'; document.body.appendChild(toast); }
     toast.textContent = text;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.remove(), 2600);
+    toastTimer = setTimeout(() => toast.remove(), 3000);
   }
   function addHistory(action, detail) {
     if (!state.user) return;
@@ -125,17 +119,18 @@
   }
   function showApp(user) {
     state.user = user;
-    sessionStorage.setItem(KEYS.session, JSON.stringify(user));
+    try { sessionStorage.setItem(KEYS.session, JSON.stringify(user)); } catch (error) { console.warn('Sesi tidak dapat disimpan', error); }
     $('loginOverlay').classList.add('hidden');
     $('mainApp').classList.remove('hidden');
     $('currentUserName').textContent = user.username;
     $('currentUserRole').textContent = user.role;
     setLoginMessage('');
-    renderApp();
+    try { renderApp(); }
+    catch (error) { console.error('Gagal menampilkan rekap', error); notify('Login berhasil, tetapi ada masalah saat memuat rekap. Muat ulang halaman.'); }
   }
   function showLogin() {
     state.user = null;
-    sessionStorage.removeItem(KEYS.session);
+    try { sessionStorage.removeItem(KEYS.session); } catch (error) { console.warn(error); }
     $('mainApp').classList.add('hidden');
     $('loginOverlay').classList.remove('hidden');
     $('passwordInput').value = '';
@@ -148,7 +143,7 @@
       const password = $('passwordInput').value;
       const account = ACCOUNTS[username];
       if (!account || password !== account.password) {
-        setLoginMessage('Username atau password salah. Gunakan akun demo yang tertera.');
+        setLoginMessage('Username atau password salah. Coba admin / admin123 atau petugas / petugas123.');
         $('passwordInput').value = '';
         $('passwordInput').focus();
         return;
@@ -172,24 +167,22 @@
   function renderInputFields() {
     const record = getRecord();
     const disabled = mayEdit() ? '' : 'disabled';
-    $('originFields').innerHTML = ORIGINS.map((item) => `<label class="number-field"><span>${item.label}</span><input type="number" min="0" step="1" inputmode="numeric" data-group="source" data-key="${item.key}" value="${record.source[item.key] ?? ''}" ${disabled}></label>`).join('');
-    $('payerFields').innerHTML = PAYERS.map((item) => `<label class="number-field"><span>${item.label}</span><input type="number" min="0" step="1" inputmode="numeric" data-group="payer" data-key="${item.key}" value="${record.payer[item.key] ?? ''}" ${disabled}></label>`).join('');
+    $('originFields').innerHTML = ORIGINS.map((item) => `<label class="number-field"><span>${item.label}</span><input type="number" min="0" step="1" inputmode="numeric" data-group="source" data-key="${item.key}" aria-label="${item.label}" value="${record.source[item.key] ?? ''}" ${disabled}></label>`).join('');
+    $('payerFields').innerHTML = PAYERS.map((item) => `<label class="number-field"><span>${item.label}</span><input type="number" min="0" step="1" inputmode="numeric" data-group="payer" data-key="${item.key}" aria-label="${item.label}" value="${record.payer[item.key] ?? ''}" ${disabled}></label>`).join('');
     $('examFields').innerHTML = ['Non Kontras','Kontras'].map((group) => {
-      const rows = EXAMS.filter((exam) => exam.group === group).map((exam) => `<div class="exam-row"><div class="exam-name">${exam.label}</div><label class="exam-number"><span>Pasien</span><input type="number" min="0" step="1" inputmode="numeric" aria-label="${exam.label} pasien" data-exam="${exam.key}" data-kind="pasien" value="${record.exams[exam.key].pasien ?? ''}" ${disabled}></label><label class="exam-number"><span>Ekspose</span><input type="number" min="0" step="1" inputmode="numeric" aria-label="${exam.label} ekspose" data-exam="${exam.key}" data-kind="ekspose" value="${record.exams[exam.key].ekspose ?? ''}" ${disabled}></label></div>`).join('');
+      const rows = EXAMS.filter((exam) => exam.group === group).map((exam) => `<div class="exam-row"><div class="exam-name">${escapeHtml(exam.label)}</div><label class="exam-number"><span>Pasien</span><input type="number" min="0" step="1" inputmode="numeric" data-exam="${exam.key}" data-kind="pasien" aria-label="${escapeHtml(exam.label)} jumlah pasien" value="${record.exams[exam.key]?.pasien ?? ''}" ${disabled}></label><label class="exam-number"><span>Ekspose</span><input type="number" min="0" step="1" inputmode="numeric" data-exam="${exam.key}" data-kind="ekspose" aria-label="${escapeHtml(exam.label)} ekspose" value="${record.exams[exam.key]?.ekspose ?? ''}" ${disabled}></label></div>`).join('');
       return `<div class="exam-group"><h4>${group}</h4><div class="exam-grid">${rows}</div></div>`;
     }).join('');
     document.querySelectorAll('#dayForm input[data-group], #dayForm input[data-exam]').forEach((input) => {
       input.addEventListener('input', handleDataInput);
-      input.addEventListener('change', () => addHistory('Ubah data', `${state.date} · ${input.getAttribute('aria-label') || input.closest('label')?.querySelector('span')?.textContent || input.dataset.key || input.dataset.kind}`));
+      input.addEventListener('change', () => addHistory('Ubah data', `${state.date} · ${input.getAttribute('aria-label') || input.dataset.key || input.dataset.exam}`));
     });
   }
   function handleDataInput(event) {
     if (!mayEdit()) { notify('Bulan terkunci. Data tidak dapat diubah.'); renderInputFields(); return; }
     const input = event.currentTarget;
     const raw = input.value;
-    if (raw !== '' && (!Number.isInteger(Number(raw)) || Number(raw) < 0)) {
-      input.setCustomValidity('Masukkan bilangan bulat nol atau lebih.'); input.reportValidity(); return;
-    }
+    if (raw !== '' && (!Number.isInteger(Number(raw)) || Number(raw) < 0)) { input.setCustomValidity('Masukkan bilangan bulat nol atau lebih.'); input.reportValidity(); return; }
     input.setCustomValidity('');
     const record = getRecord();
     const value = raw === '' ? '' : Number(raw);
@@ -234,12 +227,12 @@
   function renderDailyChecks() {
     const issues = [];
     for (let day = 1; day <= daysInMonth(); day++) {
-      const key = dayKey(day); const record = state.data[key] || emptyRecord(); const errors = validate(record);
+      const record = state.data[dayKey(day)] || emptyRecord(); const errors = validate(record);
       if (errors.length) issues.push({ day, errors });
     }
     const box = $('dailyIssues');
     if (!issues.length) { box.innerHTML = '<p class="muted">Tidak ada masalah validasi pada bulan ini.</p>'; return; }
-    box.innerHTML = issues.map((issue) => `<div class="issue-row"><span class="issue-badge err">!</span><div><strong>Tanggal ${issue.day} ${MONTHS[state.month]}</strong><div>${issue.errors.map(escapeHtml).join('<br>')}</div></div></div>`).join('');
+    box.innerHTML = issues.map((issue) => `<div class="issue-row"><span class="issue-badge err">!</span><div><strong>Tanggal ${issue.day} ${MONTHS[state.month]}</strong><div>${issue.errors.map(escapeHtml).map((error) => `<div>• ${error}</div>`).join('')}</div></div></div>`).join('');
   }
   function renderMonthlySummary() {
     const origins = Object.fromEntries(ORIGINS.map((item) => [item.key, 0]));
@@ -264,9 +257,9 @@
       const patient = exams[exam.key].pasien, exposure = exams[exam.key].ekspose;
       if (exam.group === 'Non Kontras') { nonPatients += patient; nonExposure += exposure; }
       else { contrastPatients += patient; contrastExposure += exposure; }
-      return `<tr><td>${exam.label}</td><td>${displayNumber(patient)}</td><td>${displayNumber(exposure)}</td></tr>`;
+      return `<tr><td>${escapeHtml(exam.label)}</td><td>${displayNumber(patient)}</td><td>${displayNumber(exposure)}</td></tr>`;
     }).join('');
-    $('examSummary').innerHTML = rows + `<tr class="subtotal"><td>Subtotal Non Kontras</td><td>${displayNumber(nonPatients)}</td><td>${displayNumber(nonExposure)}</td></tr><tr class="subtotal"><td>Subtotal Kontras</td><td>${displayNumber(contrastPatients)}</td><td>${displayNumber(contrastExposure)}</td></tr><tr class="grand-total"><td>Grand Total</td><td>${displayNumber(nonPatients + contrastPatients)}</td><td>${displayNumber(nonExposure + contrastExposure)}</td></tr>`;
+    $('examSummary').innerHTML = rows + `<tr class="subtotal"><td>Subtotal Non Kontras</td><td>${displayNumber(nonPatients)}</td><td>${displayNumber(nonExposure)}</td></tr><tr class="subtotal"><td>Subtotal Kontras</td><td>${displayNumber(contrastPatients)}</td><td>${displayNumber(contrastExposure)}</td></tr><tr class="grand-total"><td>Grand Total</td><td>${displayNumber(nonPatients+contrastPatients)}</td><td>${displayNumber(nonExposure+contrastExposure)}</td></tr>`;
   }
   function updatePeriodAndDate() {
     $('monthSelect').addEventListener('change', () => { state.month = Number($('monthSelect').value); state.date = dayKey(1); renderApp(); });
@@ -321,7 +314,7 @@
   }
 
   function exportRows() {
-    const rows = [['Rekap Pasien Radiologi'], ['Periode', `${MONTHS[state.month]} ${state.year}`], [], ['Tanggal','Hari','Kunjungan','Pemeriksaan','Ekspose','Asal: Umum','Asal: Poli Spesialis','Asal: Ruangan','Asal: Luar RS','Penjamin: BPJS','Penjamin: Umum','Penjamin: Asuransi','Naker (keterangan)']];
+    const rows = [['Rekap Pasien Radiologi'], ['Periode', `${MONTHS[state.month]} ${state.year}`], [], ['Tanggal','Hari','Kunjungan','Pemeriksaan','Ekspose',...ORIGINS.map((item)=>`Asal: ${item.label}`),...PAYERS.map((item)=>`Penjamin: ${item.label}`)]];
     let totalVisits = 0, totalExams = 0, totalExposure = 0;
     for (let day = 1; day <= daysInMonth(); day++) {
       const key = dayKey(day), record = state.data[key] || emptyRecord(), sums = totals(record), date = dateFromKey(key);
@@ -348,20 +341,28 @@
     const tableRows = exportRows().filter((row) => row.length && row[0] !== 'Rekap Pasien Radiologi' && row[0] !== 'Periode');
     const report = document.createElement('div');
     report.style.cssText = 'position:fixed;left:-10000px;top:0;width:900px;padding:24px;background:#fff;color:#172b35;font:12px Arial,sans-serif;';
-    report.innerHTML = `<h2>Rekap Pasien Radiologi</h2><p>Periode: ${MONTHS[state.month]} ${state.year}</p><table style="width:100%;border-collapse:collapse">${tableRows.map((row)=>`<tr>${row.map((cell)=>`<td style="border:1px solid #ddd;padding:5px">${escapeHtml(cell ?? '')}</td>`).join('')}</tr>`).join('')}</table>`;
+    report.innerHTML = `<h2>Rekap Pasien Radiologi</h2><p>Periode: ${MONTHS[state.month]} ${state.year}</p><table style="width:100%;border-collapse:collapse">${tableRows.map((row)=>`<tr>${row.map((cell)=>`<td style="border:1px solid #ddd;padding:5px">${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</table>`;
     document.body.appendChild(report);
-    window.html2pdf().set({margin:8,filename:`rekap-radiologi-${periodKey()}.pdf`,image:{type:'jpeg',quality:.96},html2canvas:{scale:1.5},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'}}).from(report).save().then(()=>report.remove()).catch(()=>{report.remove();notify('PDF gagal dibuat. Coba lagi.');});
+    window.html2pdf().set({margin:8,filename:`rekap-radiologi-${periodKey()}.pdf`,image:{type:'jpeg',quality:.96},html2canvas:{scale:1.5},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'}}).from(report).save().finally(()=>report.remove());
   }
 
   function init() {
     if (!$('loginForm') || !$('mainApp')) { console.error('Halaman aplikasi tidak lengkap.'); return; }
     bindLogin();
     updatePeriodAndDate();
-    if (state.user && ACCOUNTS[state.user.username]?.role === state.user.role) {
+    if (state.user) {
       $('loginOverlay').classList.add('hidden'); $('mainApp').classList.remove('hidden'); renderApp();
     } else {
-      state.user = null; sessionStorage.removeItem(KEYS.session); $('loginOverlay').classList.remove('hidden'); $('mainApp').classList.add('hidden');
+      $('loginOverlay').classList.remove('hidden'); $('mainApp').classList.add('hidden');
     }
   }
-  init();
+  try { init(); }
+  catch (error) {
+    console.error('Aplikasi gagal dimulai:', error);
+    const message = document.createElement('div');
+    message.setAttribute('role', 'alert');
+    message.style.cssText = 'position:fixed;z-index:9999;left:12px;right:12px;bottom:12px;padding:14px;background:#fff1f0;color:#8f1d16;border:1px solid #f1c7c3;border-radius:10px;font:14px sans-serif';
+    message.textContent = 'Aplikasi gagal dimulai. Muat ulang halaman; jika masih terjadi, periksa koneksi atau kirim screenshot error.';
+    document.body.appendChild(message);
+  }
 })();
