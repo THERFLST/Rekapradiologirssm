@@ -87,17 +87,16 @@
 
     <section id="v-usg" class="view panel module-view" hidden></section>
     <section id="v-waktu" class="view panel module-view" hidden>
-      <div class="section-title"><div><p class="eyebrow">Modul 3</p><h2>Waktu Pelayanan Pemeriksaan</h2><p class="muted">Unggah file Excel. Seluruh data akan dibaca otomatis dan laporan dibuat langsung dari isi workbook.</p></div></div>
+      <div class="section-title"><div><p class="eyebrow">Modul 3</p><h2>Waktu Pelayanan Pemeriksaan</h2><p class="muted">Unggah file Excel atau PDF, pilih bulan dan tahun laporan, lalu unduh PDF untuk periode tersebut.</p></div></div>
       <section id="serviceImportPanel" class="service-import-panel">
         <label class="service-upload-zone" for="serviceImportFile">
           <span class="service-upload-icon" aria-hidden="true">↑</span>
           <strong>Unggah file Excel atau PDF</strong>
-          <span>Pilih file .xlsx, .xls, atau PDF berisi tabel data pemeriksaan. Data akan dibaca dan laporan dibuat otomatis.</span>
+          <span>Pilih file .xlsx, .xls, atau PDF berisi tabel data pemeriksaan. Setelah data terbaca, pilih bulan dan tahun untuk membuat PDF periode tersebut.</span>
           <input id="serviceImportFile" type="file" accept=".xlsx,.xls,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
         </label>
         <div class="service-period-filter" aria-label="Periode laporan">
-          <label for="serviceStartDate">Tanggal mulai<input id="serviceStartDate" type="date"></label>
-          <label for="serviceEndDate">Tanggal akhir<input id="serviceEndDate" type="date"></label>
+          <label for="servicePeriod">Periode bulan dan tahun<input id="servicePeriod" type="month"></label>
           <button id="serviceDownloadPdf" class="secondary" type="button" disabled>Unduh Laporan PDF</button>
         </div>
         <p id="serviceImportStatus" class="service-import-status" role="status" aria-live="polite">Belum ada file yang diunggah.</p>

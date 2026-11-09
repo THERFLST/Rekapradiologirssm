@@ -18,15 +18,19 @@
 
   function findColumn(headers, names) {
     const candidates = names.map(normalize);
-    return headers.findIndex((header) => candidates.includes(normalize(header)));
+    return headers.findIndex((header) => {
+      const value = normalize(header);
+      return candidates.some((candidate) => value === candidate || (candidate.length >= 9 && value.includes(candidate)));
+    });
   }
 
   function findHeaderRow(rows) {
     return rows.findIndex((row) => {
-      const values = row.map(normalize);
-      return values.some((v) => ['pemeriksaan', 'jenis pemeriksaan'].includes(v))
-        && values.some((v) => v === 'waktu kedatangan')
-        && values.some((v) => v === 'waktu selesai');
+      const values = row.map(normalize).filter(Boolean);
+      const hasExam = values.some((v) => /pemeriksaan/.test(v));
+      const hasArrival = values.some((v) => /waktu kedatangan|tanggal kedatangan|jam kedatangan/.test(v));
+      const hasCompletion = values.some((v) => /waktu selesai|tanggal selesai|jam selesai/.test(v));
+      return hasExam && hasArrival && hasCompletion;
     });
   }
 
@@ -68,22 +72,30 @@
     const headers = rows[headerRow];
     const col = {
       number: findColumn(headers, ['No', 'Nomor']),
-      patient: findColumn(headers, ['Nama Pasien', 'Nama', 'Pasien', 'Nama Lengkap']),
-      department: findColumn(headers, ['Departemen', 'Asal Pasien', 'Poliklinik']),
-      exam: findColumn(headers, ['Pemeriksaan', 'Jenis Pemeriksaan']),
-      registration: findColumn(headers, ['Waktu Registrasi', 'Tanggal Registrasi']),
-      billing: findColumn(headers, ['Konfirmasi Billing', 'Waktu Konfirmasi Billing']),
-      arrival: findColumn(headers, ['Waktu Kedatangan', 'Tanggal Kedatangan']),
-      completion: findColumn(headers, ['Waktu Selesai', 'Tanggal Selesai']),
+      patient: findColumn(headers, ['Nama Pasien', 'Nama Lengkap', 'Nama']),
+      department: findColumn(headers, ['Departemen', 'Asal Pasien', 'Poliklinik', 'Unit Asal']),
+      exam: findColumn(headers, ['Jenis Pemeriksaan', 'Nama Pemeriksaan', 'Pemeriksaan']),
+      registration: findColumn(headers, ['Waktu Registrasi', 'Tanggal Registrasi', 'Registrasi']),
+      billing: findColumn(headers, ['Konfirmasi Billing', 'Waktu Konfirmasi Billing', 'Tanggal Billing']),
+      arrival: findColumn(headers, ['Waktu Kedatangan', 'Tanggal Kedatangan', 'Jam Kedatangan']),
+      completion: findColumn(headers, ['Waktu Selesai', 'Tanggal Selesai', 'Jam Selesai']),
       billingDiff: findColumn(headers, ['Selisih Waktu (Selesai-Konfirmasi)', 'Selisih Waktu Selesai-Konfirmasi']),
       arrivalDiff: findColumn(headers, ['Selisih Waktu (Selesai-Kedatangan)', 'Selisih Waktu Selesai-Kedatangan']),
       category: findColumn(headers, ['Keterangan Waktu Tunggu (Kedatangan-Selesai)', 'Keterangan Waktu Tunggu'])
     };
     const records = [];
+    let previousExam = '';
+    let previousDepartment = '';
     rows.slice(headerRow + 1).forEach((row, index) => {
       if (!row.some((cell) => String(cell ?? '').trim() !== '')) return;
-      const exam = String(row[col.exam] ?? '').trim();
-      if (!exam) return;
+      // Some Excel exports use vertically merged cells. Carry the examination/group
+      // label forward so patient rows are not silently discarded.
+      let exam = String(row[col.exam] ?? '').trim();
+      if (/^(pemeriksaan|jenis pemeriksaan|nama pemeriksaan)$/i.test(normalize(exam))) return;
+      if (exam) previousExam = exam; else exam = previousExam;
+      let department = col.department >= 0 ? String(row[col.department] ?? '').trim() : '';
+      if (department) previousDepartment = department; else department = previousDepartment;
+      const patientValue = col.patient >= 0 ? String(row[col.patient] ?? '').trim() : '';
       const arrivalDate = col.arrival >= 0 ? excelDate(row[col.arrival]) : null;
       const registrationDate = col.registration >= 0 ? excelDate(row[col.registration]) : null;
       const completionDate = col.completion >= 0 ? excelDate(row[col.completion]) : null;
@@ -93,6 +105,9 @@
       if (billingMinutes == null && completionDate && billingDate) billingMinutes = timeOfDayMinutes(completionDate) - timeOfDayMinutes(billingDate);
       if (arrivalMinutes == null && completionDate && arrivalDate) arrivalMinutes = timeOfDayMinutes(completionDate) - timeOfDayMinutes(arrivalDate);
       const categoryText = col.category >= 0 ? String(row[col.category] ?? '').trim() : '';
+      // Keep every patient/examination row with useful source data, even if one
+      // optional field is blank; this prevents partial exports in the PDF.
+      if (!exam && !patientValue && !arrivalDate && !completionDate && !registrationDate) return;
       const isThorax = /thorax/i.test(exam);
       const status = /data tidak lengkap/i.test(categoryText) || !arrivalDate || arrivalMinutes == null
         ? 'Data Tidak Lengkap'
@@ -102,8 +117,8 @@
       records.push({
         rowNumber: headerRow + index + 2,
         number: col.number >= 0 ? row[col.number] : records.length + 1,
-        patient: col.patient >= 0 ? String(row[col.patient] ?? '').trim() : '',
-        department: col.department >= 0 ? String(row[col.department] ?? '').trim() : '',
+        patient: patientValue,
+        department,
         exam, isThorax, registrationDate, billingDate, arrivalDate, completionDate,
         billingMinutes, arrivalMinutes, status, sheetName
       });
@@ -170,33 +185,34 @@
 
   function buildReport(workbook) {
     const parsedSheets = workbook.SheetNames.map((name) => {
-      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1, raw: true, defval: '' });
+      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1, raw: true, defval: '', blankrows: true });
       return parseSheet(rows, name);
-    }).filter(Boolean);
+    }).filter((sheet) => sheet && sheet.records.length > 0);
     if (!parsedSheets.length) throw new Error('Format Excel belum dikenali. Pastikan terdapat header Pemeriksaan, Waktu Kedatangan, dan Waktu Selesai.');
     return finalizeReport(parsedSheets, workbook.SheetNames);
   }
 
   function filterPeriod(report) {
-    const start = $('serviceStartDate')?.value || '';
-    const end = $('serviceEndDate')?.value || '';
-    if (start && end && start > end) throw new Error('Tanggal mulai tidak boleh melewati tanggal akhir.');
-    const inRange = (record) => {
+    const period = $('servicePeriod')?.value || '';
+    if (period && !/^\d{4}-\d{2}$/.test(period)) throw new Error('Pilih periode bulan dan tahun yang valid.');
+    const inPeriod = (record) => {
       const date = record.arrivalDate || record.registrationDate || record.completionDate;
       const key = dateKey(date);
-      return (!start || (key && key >= start)) && (!end || (key && key <= end));
+      return !period || (key && key.slice(0, 7) === period);
     };
-    const allRecords = report.allRecords.filter(inRange);
+    const allRecords = report.allRecords.filter(inPeriod);
     const records = allRecords.filter((record) => record.isThorax);
-    if (!allRecords.length) throw new Error('Tidak ada data pemeriksaan pada rentang tanggal yang dipilih.');
+    if (!allRecords.length) throw new Error(`Tidak ada data pemeriksaan pada periode ${period || 'yang dipilih'}.`);
     const complete = records.filter((record) => record.status !== 'Data Tidak Lengkap' && Number.isFinite(record.arrivalMinutes));
     const under = complete.filter((record) => record.arrivalMinutes < 480).length;
     const over = complete.length - under;
+    const [year, month] = period ? period.split('-').map(Number) : [];
+    const rangeLabel = period ? `${MONTHS[month - 1]} ${year}` : 'Seluruh periode data';
     return { ...report, allRecords, records, complete, under, over, incomplete: records.length - complete.length,
       average: complete.length ? complete.reduce((sum, record) => sum + record.arrivalMinutes, 0) / complete.length : NaN,
       percent: complete.length ? under / complete.length : 0,
       overPercent: complete.length ? over / complete.length : 0,
-      rangeLabel: `${start ? fmtDate(new Date(`${start}T00:00:00`)) : 'Awal data'} – ${end ? fmtDate(new Date(`${end}T00:00:00`)) : 'Akhir data'}` };
+      rangeLabel, periodKey: period };
   }
 
   function summaryRows(report) {
@@ -290,6 +306,7 @@
     const report = $('serviceCurrentReport')?._report;
     const fileName = $('serviceCurrentReport')?._fileName || 'laporan-waktu-pelayanan';
     if (!report) return;
+    if (!$('servicePeriod')?.value) { $('serviceImportStatus').textContent = 'Pilih bulan dan tahun periode laporan terlebih dahulu sebelum mengunduh PDF.'; $('servicePeriod')?.focus(); return; }
     if (!window.jspdf?.jsPDF) { $('serviceImportStatus').textContent = 'Generator PDF belum siap. Muat ulang halaman dan coba kembali.'; return; }
     let filtered;
     try { filtered = filterPeriod(report); } catch (error) { $('serviceImportStatus').textContent = error.message; return; }
@@ -317,9 +334,10 @@
 
     doc.addPage('a4', 'landscape');
     doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.text('SELURUH DATA PEMERIKSAAN', margin, 16);
-    doc.autoTable({ startY: 22, head: [['No', 'Nama Pasien', 'Tanggal', 'Departemen', 'Pemeriksaan', 'Kedatangan', 'Selesai', 'Durasi', 'Keterangan']], body: filtered.allRecords.map((record, index) => [index + 1, record.patient || '—', fmtDate(record.arrivalDate || record.registrationDate || record.completionDate), record.department || '—', record.exam, fmtTime(record.arrivalDate), fmtTime(record.completionDate), fmtDuration(record.arrivalMinutes), record.status]), theme: 'grid', styles: { fontSize: 6.5, cellPadding: 1.5, overflow: 'linebreak' }, headStyles: { fillColor: [31, 79, 91] }, didDrawPage: () => { doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.text(`Periode ${filtered.rangeLabel}`, margin, 200); } });
+    doc.autoTable({ startY: 22, head: [['No', 'Nama Pasien', 'Tanggal', 'Departemen', 'Pemeriksaan', 'Kedatangan', 'Selesai', 'Durasi', 'Keterangan']], body: filtered.allRecords.map((record, index) => [index + 1, record.patient || '—', fmtDate(record.arrivalDate || record.registrationDate || record.completionDate), record.department || '—', record.exam, fmtTime(record.arrivalDate), fmtTime(record.completionDate), fmtDuration(record.arrivalMinutes), record.status]), theme: 'grid', styles: { fontSize: 6.5, cellPadding: 1.5, overflow: 'linebreak', valign: 'middle' }, headStyles: { fillColor: [31, 79, 91] }, showHead: 'everyPage', rowPageBreak: 'avoid', margin: { top: 22, right: 10, bottom: 12, left: 10 }, didDrawPage: (data) => { doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.text(`Periode ${filtered.rangeLabel} | Data ${filtered.allRecords.length} baris | Halaman ${data.pageNumber}`, margin, 200); } });
     const safeName = fileName.replace(/\.[^.]+$/, '').replace(/[^a-z0-9-_]+/gi, '_');
-    doc.save(`Laporan_Waktu_Pelayanan_${safeName}.pdf`);
+    const periodSuffix = filtered.periodKey ? `_${filtered.periodKey}` : '_Seluruh_Periode';
+    doc.save(`Laporan_Waktu_Pelayanan${periodSuffix}_${safeName}.pdf`);
   }
 
 
@@ -327,8 +345,12 @@
     const input = $('serviceImportFile');
     if (!input) return;
     input.addEventListener('change', () => handleFile(input.files?.[0]));
-    $('serviceStartDate').addEventListener('change', applyAndRender);
-    $('serviceEndDate').addEventListener('change', applyAndRender);
+    const periodInput = $('servicePeriod');
+    if (periodInput) {
+      const now = new Date();
+      periodInput.value = '';
+      periodInput.addEventListener('change', applyAndRender);
+    }
     $('serviceDownloadPdf').addEventListener('click', downloadPdf);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true }); else init();
