@@ -10,13 +10,13 @@
   <link rel="stylesheet" href="./modules.css?v=v2">
   <link rel="stylesheet" href="./auth.css?v=v1">
   <link rel="stylesheet" href="./master.css?v=v1">
-  <link rel="stylesheet" href="./service-import.css?v=v3">
+  <link rel="stylesheet" href="./service-import.css?v=v2">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
   <script src="./app.js?v=v3" defer></script>
   <script src="./modules.js?v=v1" defer></script>
   <script src="./auth.js?v=v1" defer></script>
   <script src="./master.js?v=v1" defer></script>
-  <script src="./service-import.js?v=v3" defer></script>
+  <script src="./service-import.js?v=v2" defer></script>
 </head>
 <body class="app-locked">
   <section id="loginScreen" class="login-screen" aria-labelledby="loginTitle" hidden>
@@ -85,27 +85,19 @@
 
     <section id="v-usg" class="view panel module-view" hidden></section>
     <section id="v-waktu" class="view panel module-view" hidden>
-      <div class="section-title"><div><p class="eyebrow">Modul 3</p><h2>Laporan Waktu Pelayanan</h2><p class="muted">Catat waktu mulai dan selesai pemeriksaan tanpa nama pasien.</p></div></div>
-      <div class="service-form">
-        <label>Tanggal<input id="serviceDate" type="date"></label>
-        <label>Kelompok pemeriksaan<select id="serviceType"><option value="thorax">Thorax</option><option value="lainnya">Pemeriksaan lainnya</option></select></label>
-        <label>Waktu mulai<input id="serviceStart" type="time" required></label>
-        <label>Waktu selesai<input id="serviceEnd" type="time" required></label>
-        <button id="saveService" class="primary-action" type="button">Catat Waktu</button>
-      </div>
-      <p id="serviceStatus" class="muted" aria-live="polite"></p>
-      <section id="serviceImportPanel" class="panel service-import-panel">
-        <div class="section-title"><div><h3>Upload Excel — Laporan Otomatis</h3><p class="muted">Pilih file Excel; laporan langsung dibuat mengikuti format tab LAPORAN pada workbook.</p></div></div>
-        <div class="service-import-controls">
-          <label for="serviceImportFile">Pilih file Excel/CSV<input id="serviceImportFile" type="file" accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"></label>
-        </div>
-        <p class="hint">Setelah file dipilih, web otomatis membaca sheet THORAX atau menyaring data tarik, menghitung indikator, lalu menampilkan dan menyimpan laporan. Perhitungan selisih mengikuti nilai pada kolom Excel, termasuk perhitungan komponen jam saja.</p>
-        <p id="serviceImportStatus" class="muted" role="status" aria-live="polite"></p>
-        <div id="serviceImportPreview" class="scroll"></div>
-        <section class="panel generated-report-panel"><div class="section-title"><div><h3>Laporan dan Evaluasi Waktu Tunggu Hasil Pelayanan Foto Thorax</h3><p class="hint">Format mengikuti sheet LAPORAN pada Excel contoh.</p></div></div><div id="serviceGeneratedReport" aria-live="polite"><p class="empty-state">Upload Excel untuk membentuk laporan.</p></div><div id="serviceReportActions" class="service-report-actions" hidden><button id="serviceExportReportExcel" class="secondary" type="button">Unduh Laporan Excel</button><button id="servicePrintReport" class="secondary" type="button">Cetak / Simpan PDF</button></div></section>
+      <div class="section-title"><div><p class="eyebrow">Modul 3</p><h2>Waktu Pelayanan Pemeriksaan</h2><p class="muted">Unggah file Excel. Seluruh data akan dibaca otomatis dan laporan dibuat langsung dari isi workbook.</p></div></div>
+      <section id="serviceImportPanel" class="service-import-panel">
+        <label class="service-upload-zone" for="serviceImportFile">
+          <span class="service-upload-icon" aria-hidden="true">↑</span>
+          <strong>Unggah file Excel</strong>
+          <span>Pilih file .xlsx atau .xls yang berisi data pemeriksaan dan, bila tersedia, sheet LAPORAN.</span>
+          <input id="serviceImportFile" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+        </label>
+        <p id="serviceImportStatus" class="service-import-status" role="status" aria-live="polite">Belum ada file yang diunggah.</p>
       </section>
-      <section class="panel module-report"><div class="section-title"><div><h3>Rata-rata waktu per bulan</h3></div></div><div id="serviceMonthly" class="scroll"></div></section>
-      <section class="panel module-report"><div class="section-title"><div><h3>Catatan terbaru</h3></div></div><div id="serviceRecent" class="scroll"></div></section>
+      <section id="serviceReportResult" class="service-report-result" aria-live="polite" hidden>
+        <div id="serviceReportContent"></div>
+      </section>
     </section>
 
     <section id="v-master" class="view panel module-view" hidden>
