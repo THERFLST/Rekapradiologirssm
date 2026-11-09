@@ -1,214 +1,90 @@
-<!doctype html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rekap Pasien Radiologi</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-  <script src="app.js" defer></script>
-</head>
-<body>
-  <div id="loginOverlay" class="modal-overlay">
-    <div class="modal-card">
-      <p class="eyebrow">Akses aplikasi</p>
-      <h2>Login Rekap Pasien Radiologi</h2>
-      <form id="loginForm">
-        <label class="field-block">
-          <span>Username</span>
-          <input id="usernameInput" type="text" value="admin" />
-        </label>
-        <label class="field-block">
-          <span>Password</span>
-          <input id="passwordInput" type="password" value="admin123" />
-        </label>
-        <button type="submit" class="primary full">Masuk</button>
-      </form>
-      <div class="demo-box">
-        <small>Demo akun</small>
-        <div>Admin: admin / admin123</div>
-        <div>Petugas: petugas / petugas123</div>
-      </div>
-    </div>
-  </div>
+(() => {
+  'use strict';
 
-  <div id="mainApp" class="app-shell hidden">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">Instalasi Radiologi</p>
-        <h1>Rekap Pasien Radiologi</h1>
-      </div>
+  const DEMO_USERS = Object.freeze({
+    admin: { password: 'admin123', role: 'Admin' },
+    petugas: { password: 'petugas123', role: 'Petugas' }
+  });
 
-      <div class="controls">
-        <label>
-          <span>Bulan</span>
-          <select id="monthSelect"></select>
-        </label>
+  const byId = (id) => document.getElementById(id);
+  const loginForm = byId('loginForm');
+  const loginOverlay = byId('loginOverlay');
+  const mainApp = byId('mainApp');
+  const usernameInput = byId('usernameInput');
+  const passwordInput = byId('passwordInput');
+  const logoutButton = byId('logoutBtn');
 
-        <label>
-          <span>Tahun</span>
-          <select id="yearSelect"></select>
-        </label>
+  if (!loginForm || !loginOverlay || !mainApp || !usernameInput || !passwordInput) {
+    console.error('Elemen login tidak ditemukan. Periksa kembali struktur index.html.');
+    return;
+  }
 
-        <div class="action-group">
-          <button id="excelBtn" class="secondary">Excel</button>
-          <button id="pdfBtn" class="secondary">PDF</button>
-          <button id="backupBtn" class="secondary">Backup</button>
-          <button id="restoreBtn" class="secondary">Restore</button>
-          <button id="lockBtn" class="secondary danger">Kunci Bulan</button>
-          <button id="unlockBtn" class="secondary success">Buka Kunci</button>
-          <button id="logoutBtn" class="secondary">Logout</button>
-        </div>
-      </div>
-    </header>
+  // Jangan mengisi password secara otomatis; minta pengguna memasukkannya sendiri.
+  usernameInput.value = usernameInput.value || 'admin';
+  passwordInput.value = '';
+  usernameInput.autocomplete = 'username';
+  passwordInput.autocomplete = 'current-password';
+  usernameInput.required = true;
+  passwordInput.required = true;
 
-    <div class="user-bar">
-      <div class="user-chip">
-        <span class="chip-label">User</span>
-        <strong id="currentUserName">-</strong>
-      </div>
-      <div class="user-chip">
-        <span class="chip-label">Role</span>
-        <strong id="currentUserRole">-</strong>
-      </div>
-      <div class="user-chip">
-        <span class="chip-label">Status bulanan</span>
-        <strong id="monthLockStatus">Terbuka</strong>
-      </div>
-    </div>
+  let message = byId('loginMessage');
+  if (!message) {
+    message = document.createElement('p');
+    message.id = 'loginMessage';
+    message.setAttribute('role', 'alert');
+    message.setAttribute('aria-live', 'polite');
+    message.style.cssText = 'min-height:1.4em;margin:8px 0;color:#b42318;font-size:13px;font-weight:600;';
+    const submitButton = loginForm.querySelector('button[type="submit"]');
+    loginForm.insertBefore(message, submitButton || null);
+  }
 
-    <section class="summary-cards">
-      <div class="card">
-        <span>Kunjungan</span>
-        <strong id="summaryVisits">0</strong>
-      </div>
-      <div class="card">
-        <span>Pemeriksaan</span>
-        <strong id="summaryExams">0</strong>
-      </div>
-      <div class="card">
-        <span>Ekspose</span>
-        <strong id="summaryExpose">0</strong>
-      </div>
-    </section>
+  function showApp(user) {
+    loginOverlay.classList.add('hidden');
+    mainApp.classList.remove('hidden');
+    const name = byId('currentUserName');
+    const role = byId('currentUserRole');
+    if (name) name.textContent = user.username;
+    if (role) role.textContent = user.role;
+    sessionStorage.setItem('rekapRadiologiDemoUser', JSON.stringify(user));
+    message.textContent = '';
+    passwordInput.value = '';
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
 
-    <section class="daily-check panel">
-      <div class="section-head">
-        <h2>Pengecekan Harian</h2>
-      </div>
-      <div id="dailyIssues" class="issues-box">
-        <p class="muted">Belum ada masalah.</p>
-      </div>
-    </section>
+  function showLogin() {
+    sessionStorage.removeItem('rekapRadiologiDemoUser');
+    mainApp.classList.add('hidden');
+    loginOverlay.classList.remove('hidden');
+    passwordInput.value = '';
+    message.textContent = '';
+    usernameInput.focus();
+  }
 
-    <section class="panel entry-panel">
-      <div class="section-head">
-        <h2>Input Harian</h2>
-        <button id="saveBtn" class="primary">Simpan Bulan</button>
-      </div>
+  loginForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const username = usernameInput.value.trim().toLowerCase();
+    const password = passwordInput.value;
+    const account = DEMO_USERS[username];
 
-      <div class="date-nav">
-        <button type="button" id="prevDay" class="icon-button" aria-label="Tanggal sebelumnya">‹</button>
-        <label class="date-picker">
-          <span>Tanggal</span>
-          <input id="dateSelect" type="date" />
-        </label>
-        <button type="button" id="nextDay" class="icon-button" aria-label="Tanggal berikutnya">›</button>
-      </div>
+    if (!account || password !== account.password) {
+      message.textContent = 'Username atau password salah. Periksa kembali akun demo yang digunakan.';
+      passwordInput.value = '';
+      passwordInput.focus();
+      return;
+    }
 
-      <div id="dateCaption" class="date-caption"></div>
+    showApp({ username, role: account.role });
+  });
 
-      <form id="dayForm" autocomplete="off">
-        <div class="form-section">
-          <h3>Asal Pasien</h3>
-          <div id="originFields" class="field-grid"></div>
-        </div>
+  if (logoutButton) logoutButton.addEventListener('click', showLogin);
 
-        <div class="form-section">
-          <h3>Penjamin</h3>
-          <p class="hint">Naker hanya sebagai keterangan dan tidak dihitung sebagai penjamin tambahan.</p>
-          <div id="payerFields" class="field-grid"></div>
-        </div>
-
-        <div class="form-section">
-          <h3>Jenis Pemeriksaan</h3>
-          <p class="hint">Isi jumlah pasien dan ekspose per jenis. Kosong diartikan 0.</p>
-          <div id="examFields"></div>
-        </div>
-
-        <div class="daily-totals">
-          <div>
-            <span>Kunjungan</span>
-            <strong id="dayVisits">-</strong>
-          </div>
-          <div>
-            <span>Pemeriksaan</span>
-            <strong id="dayExams">-</strong>
-          </div>
-          <div>
-            <span>Ekspose</span>
-            <strong id="dayExpose">-</strong>
-          </div>
-          <div>
-            <span>Status</span>
-            <strong id="dayStatus" class="status-text ok-text">OK</strong>
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button type="button" id="clearDay" class="button secondary">Kosongkan tanggal ini</button>
-          <button type="button" id="clearMonth" class="button danger-outline">Reset bulan ini</button>
-          <span class="hint">Perubahan disimpan otomatis di browser ini.</span>
-        </div>
-      </form>
-    </section>
-
-    <section class="panel summary-panel">
-      <div class="section-head">
-        <h2>Rekap Bulanan</h2>
-      </div>
-
-      <div class="summary-grid">
-        <article class="summary-card">
-          <h3>Asal Pasien</h3>
-          <div id="originSummary"></div>
-        </article>
-
-        <article class="summary-card">
-          <h3>Penjamin</h3>
-          <div id="payerSummary"></div>
-        </article>
-      </div>
-
-      <article class="summary-card exam-summary">
-        <h3>Jenis Pemeriksaan</h3>
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Jenis</th>
-                <th>Pasien</th>
-                <th>Ekspose</th>
-              </tr>
-            </thead>
-            <tbody id="examSummary"></tbody>
-          </table>
-        </div>
-      </article>
-    </section>
-
-    <section class="panel history-panel">
-      <div class="section-head">
-        <h2>Riwayat Perubahan</h2>
-      </div>
-      <div id="historyList" class="history-list"></div>
-    </section>
-  </div>
-
-  <input id="restoreInput" type="file" accept="application/json" class="hidden" />
-</body>
-</html>
+  // Pulihkan sesi tab ini saja, tanpa menyimpan password.
+  try {
+    const savedUser = JSON.parse(sessionStorage.getItem('rekapRadiologiDemoUser') || 'null');
+    if (savedUser && DEMO_USERS[savedUser.username] && savedUser.role === DEMO_USERS[savedUser.username].role) {
+      showApp(savedUser);
+    }
+  } catch (error) {
+    sessionStorage.removeItem('rekapRadiologiDemoUser');
+  }
+})();
