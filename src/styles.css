@@ -1,0 +1,203 @@
+import { useMemo, useState } from 'react';
+import { supabase } from './lib/supabase';
+
+const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const originOptions = ['Umum', 'Poli Spesialis', 'Ruangan', 'Luar RS'];
+const payerOptions = ['BPJS', 'Umum', 'Asuransi', 'Naker'];
+const examTypes = [
+  'Thorax PA', 'Thorax PA & Lat', 'Extremitas', 'Extremitas Bilateral', 'Columna Vertebralis',
+  'Columna Vert 4 Posisi', 'Cranium', 'Sinus', 'BNO/Abdomen', 'Abdomen 3 Posisi', 'Pelvis',
+  'Pelvis 2 Posisi', 'OMD/Oesophagografi', 'MD', 'Arthrografi', 'Cholecystografi', 'Urethrocystografi',
+  'HSG', 'Colon Inloop (B. Enema)', 'BNO-IVP', 'RPG', 'COR Analisa', 'Appendicogram'
+];
+
+const sampleDaily = [
+  { date: '2026-11-01', visits: 28, examinations: 30, exposure: 35 },
+  { date: '2026-11-02', visits: 31, examinations: 32, exposure: 37 },
+  { date: '2026-11-03', visits: 26, examinations: 28, exposure: 33 },
+  { date: '2026-11-04', visits: 34, examinations: 36, exposure: 42 }
+];
+
+function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('admin123');
+  const [role, setRole] = useState('Admin');
+  const [selectedMonth, setSelectedMonth] = useState('November');
+
+  const monthlySummary = useMemo(() => {
+    const totalVisits = sampleDaily.reduce((sum, item) => sum + item.visits, 0);
+    const totalExams = sampleDaily.reduce((sum, item) => sum + item.examinations, 0);
+    const totalExposure = sampleDaily.reduce((sum, item) => sum + item.exposure, 0);
+
+    return {
+      visits: totalVisits,
+      examinations: totalExams,
+      exposure: totalExposure
+    };
+  }, []);
+
+  const handleLogin = (event) => {
+    event.preventDefault();
+    const valid = username === 'admin' && password === 'admin123';
+    if (!valid) {
+      alert('Username atau password salah. Gunakan akun demo admin/admin123.');
+      return;
+    }
+
+    setRole('Admin');
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setRole('Petugas');
+  };
+
+  return (
+    <>
+      {!isLoggedIn ? (
+        <div className="login-shell">
+          <div className="login-card">
+            <p className="eyebrow">Akses aplikasi</p>
+            <h1>Rekap Pasien Radiologi</h1>
+            <form onSubmit={handleLogin} className="login-form">
+              <label>
+                <span>Username</span>
+                <input value={username} onChange={(e) => setUsername(e.target.value)} />
+              </label>
+              <label>
+                <span>Password</span>
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+              </label>
+              <button type="submit" className="primary-btn">Masuk</button>
+            </form>
+            <div className="demo-box">
+              <strong>Demo akun</strong>
+              <div>Admin: admin / admin123</div>
+              <div>Petugas: petugas / petugas123</div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <main className="app-shell">
+          <header className="topbar">
+            <div>
+              <p className="eyebrow">Instalasi Radiologi · RS Setia Mitra</p>
+              <h1>Rekap Pasien Radiologi</h1>
+            </div>
+            <div className="topbar-actions">
+              <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
+                {months.map((month) => (
+                  <option key={month} value={month}>{month}</option>
+                ))}
+              </select>
+              <button className="secondary-btn">Excel</button>
+              <button className="secondary-btn">PDF</button>
+              <button className="ghost-btn" onClick={handleLogout}>Logout</button>
+            </div>
+          </header>
+
+          <div className="user-bar">
+            <div className="user-chip"><span>User</span><strong>{username}</strong></div>
+            <div className="user-chip"><span>Role</span><strong>{role}</strong></div>
+            <div className="user-chip"><span>Status bulan</span><strong>Terbuka</strong></div>
+          </div>
+
+          <section className="summary-grid">
+            <article className="summary-card">
+              <span>Total kunjungan</span>
+              <strong>{monthlySummary.visits}</strong>
+            </article>
+            <article className="summary-card">
+              <span>Total pemeriksaan</span>
+              <strong>{monthlySummary.examinations}</strong>
+            </article>
+            <article className="summary-card">
+              <span>Total ekspose</span>
+              <strong>{monthlySummary.exposure}</strong>
+            </article>
+          </section>
+
+          <section className="panel">
+            <div className="section-header">
+              <h2>Input harian</h2>
+            </div>
+
+            <div className="form-grid">
+              <div className="section-box">
+                <h3>Asal pasien</h3>
+                {originOptions.map((item) => (
+                  <label key={item} className="field-row">
+                    <span>{item}</span>
+                    <input type="number" min="0" defaultValue="0" />
+                  </label>
+                ))}
+              </div>
+
+              <div className="section-box">
+                <h3>Penjamin</h3>
+                {payerOptions.map((item) => (
+                  <label key={item} className="field-row">
+                    <span>{item}</span>
+                    <input type="number" min="0" defaultValue="0" />
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="section-box exam-box">
+              <h3>Jenis pemeriksaan</h3>
+              <div className="exam-grid">
+                {examTypes.map((exam) => (
+                  <div key={exam} className="exam-row">
+                    <span>{exam}</span>
+                    <input type="number" min="0" defaultValue="0" aria-label={`${exam} pasien`} />
+                    <input type="number" min="0" defaultValue="0" aria-label={`${exam} ekspose`} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="panel">
+            <div className="section-header">
+              <h2>Rekap bulanan</h2>
+            </div>
+
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Tanggal</th>
+                    <th>Kunjungan</th>
+                    <th>Pemeriksaan</th>
+                    <th>Ekspose</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sampleDaily.map((row) => (
+                    <tr key={row.date}>
+                      <td>{row.date}</td>
+                      <td>{row.visits}</td>
+                      <td>{row.examinations}</td>
+                      <td>{row.exposure}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      )}
+
+      {supabase ? (
+        <div className="status-banner">Supabase client tersedia. Siap untuk migrasi data ke database.</div>
+      ) : (
+        <div className="status-banner warn">Supabase belum dikonfigurasi. Tambahkan .env.local sesuai .env.example.</div>
+      )}
+    </>
+  );
+}
+
+export default App;
