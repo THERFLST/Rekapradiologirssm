@@ -1,12 +1,13 @@
 <!doctype html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f3f6f8">
-  <meta name="description" content="Rekap jumlah pasien dan pemeriksaan Instalasi Radiologi RS Setia Mitra.">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f3f6f8" />
   <title>Rekap Pasien Radiologi</title>
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
@@ -28,12 +29,13 @@
       <div>
         <p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p>
         <h1>Rekap Pasien Radiologi</h1>
-        <p class="intro">Catat jumlah pasien dan pemeriksaan harian, lalu tinjau rekap bulanan.</p>
       </div>
       <div class="period-controls" aria-label="Pilih periode rekap">
         <label>Bulan<select id="monthSelect" aria-label="Pilih bulan"></select></label>
         <label>Tahun<select id="yearSelect" aria-label="Pilih tahun"></select></label>
         <div class="action-group">
+          <button id="excelBtn" type="button" class="secondary">Excel</button>
+          <button id="pdfBtn" type="button" class="secondary">PDF</button>
           <button id="lockBtn" type="button" class="button-danger">Kunci Bulan</button>
           <button id="unlockBtn" type="button" class="button-success">Buka Kunci</button>
           <button id="logoutBtn" type="button">Logout</button>
