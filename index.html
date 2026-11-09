@@ -6,13 +6,28 @@
   <meta name="theme-color" content="#f3f6f8">
   <meta name="description" content="Rekap jumlah pasien dan pemeriksaan radiologi.">
   <title>Rekap Pasien Radiologi</title>
-  <link rel="stylesheet" href="./styles.css?v=v6">
+  <link rel="stylesheet" href="./styles.css?v=v7">
   <link rel="stylesheet" href="./total.css?v=v1">
+  <link rel="stylesheet" href="./auth.css?v=v1">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
   <script src="./app.js?v=v6" defer></script>
   <script src="./total.js?v=v2" defer></script>
+  <script src="./auth.js?v=v1" defer></script>
 </head>
-<body>
+<body class="app-locked">
+  <section id="loginScreen" class="login-screen" aria-labelledby="loginTitle">
+    <form id="loginForm" class="login-card">
+      <p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p>
+      <h1 id="loginTitle">Masuk</h1>
+      <label for="loginUsername">Username</label>
+      <input id="loginUsername" name="username" type="text" autocomplete="username" required>
+      <label for="loginPassword">Password</label>
+      <input id="loginPassword" name="password" type="password" autocomplete="current-password" required>
+      <button type="submit">Masuk</button>
+      <p id="loginError" class="login-error" role="alert" aria-live="polite"></p>
+    </form>
+  </section>
+
   <main class="shell">
     <header class="top">
       <div><p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p><h1>Rekap Pasien Radiologi</h1></div>
@@ -22,6 +37,7 @@
         <button type="button" data-view="total">Total</button>
         <button type="button" data-view="export">Export</button>
       </nav>
+      <button type="button" id="logoutButton" class="logout-button">Keluar</button>
     </header>
 
     <section id="v-isi" class="view panel">

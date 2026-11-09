@@ -1,0 +1,16 @@
+:root{--login-ink:#172b35;--login-muted:#62727a;--login-green:#105544;--login-border:#dfe7ea}
+body.app-locked{min-height:100vh;background:#f3f6f8}
+body.app-locked .shell{display:none}
+.login-screen{min-height:100vh;display:grid;place-items:center;padding:24px}
+.login-screen[hidden]{display:none}
+.login-card{width:min(100%,420px);display:flex;flex-direction:column;gap:12px;padding:30px;border:1px solid var(--login-border);border-radius:16px;background:#fff;box-shadow:0 12px 40px rgba(23,43,53,.08)}
+.login-card .eyebrow{margin:0;color:var(--login-muted);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.login-card h1{margin:0 0 8px;color:var(--login-ink);font-size:28px}
+.login-card label{margin-top:4px;color:var(--login-ink);font-size:14px;font-weight:650}
+.login-card input{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--login-border);border-radius:8px;font:inherit}
+.login-card input:focus{outline:2px solid rgba(16,85,68,.22);border-color:var(--login-green)}
+.login-card button{min-height:46px;margin-top:8px;border:0;border-radius:8px;background:var(--login-green);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.login-card button:hover{filter:brightness(.94)}
+.login-error{min-height:20px;margin:0;color:#a52a2a;font-size:13px}
+.logout-button{min-height:38px;padding:8px 12px;border:1px solid var(--login-border);border-radius:8px;background:#fff;color:var(--login-ink);font:inherit;cursor:pointer}
+@media(max-width:760px){.login-card{padding:24px}.logout-button{width:100%}}
