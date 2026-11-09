@@ -6,15 +6,16 @@
   const ORIGINS=[['umum','Umum'],['spesialis','Poli Spesialis'],['ruangan','Ruangan'],['luarRs','Luar RS']];
   const PAYERS=[['bpjs','BPJS'],['umum','Umum'],['asuransi','Asuransi'],['naker','Naker (keterangan)']];
   const EXAMS=[['thoraxPa','Thorax PA','Non Kontras'],['thoraxPaLat','Thorax PA & Lat','Non Kontras'],['extremitas','Extremitas','Non Kontras'],['extremitasBilateral','Extremitas Bilateral','Non Kontras'],['columnaVertebralis','Columna Vertebralis','Non Kontras'],['columnaVert4Posisi','Columna Vert 4 Posisi','Non Kontras'],['cranium','Cranium','Non Kontras'],['sinus','Sinus','Non Kontras'],['bnoAbdomen','BNO/Abdomen','Non Kontras'],['abdomen3Posisi','Abdomen 3 Posisi','Non Kontras'],['pelvis','Pelvis','Non Kontras'],['pelvis2Posisi','Pelvis 2 Posisi','Non Kontras'],['omdOesophagografi','OMD/Oesophagografi','Kontras'],['md','MD','Kontras'],['arthrografi','Arthrografi','Kontras'],['cholecystografi','Cholecystografi','Kontras'],['urethrocystografi','Urethrocystografi','Kontras'],['hsg','HSG','Kontras'],['colonInloop','Colon Inloop (B. Enema)','Kontras'],['bnoIvp','BNO-IVP','Kontras'],['rpg','RPG','Kontras'],['corAnalisa','COR Analisa','Kontras'],['appendicogram','Appendicogram','Kontras']];
-  const $=id=>document.getElementById(id), today=new Date();
-  const state={year:today.getFullYear(),month:today.getMonth(),date:keyOf(today),data:load()};
-  function keyOf(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
-  function keyDay(d){return `${state.year}-${String(state.month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
-  function days(){return new Date(state.year,state.month+1,0).getDate()}
-  function dateObj(key){return new Date(`${key}T12:00:00`)}
+  const $=id=>document.getElementById(id), today=new Date(), pad=n=>String(n).padStart(2,'0');
+  const keyOf=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const dateObj=k=>new Date(`${k}T12:00:00`);
+  const short=k=>{const d=dateObj(k);return `${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)} ${d.getFullYear()}`};
+  const longDate=k=>{const d=dateObj(k);return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`};
+  const S={view:'isi',date:keyOf(today),rek:{mode:'harian',ref:keyOf(today)},exp:{mode:'harian',ref:keyOf(today)}};
+  const state={data:load()};
   function load(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch{return {}}}
   function save(){try{localStorage.setItem(KEY,JSON.stringify(state.data));$('saved').textContent='Tersimpan otomatis di browser ini.'}catch{$('saved').textContent='Gagal menyimpan: ruang browser mungkin penuh.'}}
-  function record(key=state.date){return state.data[key]||{source:{},payer:{},exams:{}}}
+  function record(key=S.date){return state.data[key]||{source:{},payer:{},exams:{}}}
   function value(v){if(v===''||v==null)return 0;const n=Number(v);return Number.isFinite(n)?n:0}
   function fmt(n){return n===0?'-':Number(n).toLocaleString('id-ID')}
   function total(r){return {visits:ORIGINS.reduce((s,[k])=>s+value(r.source[k]),0),exams:EXAMS.reduce((s,[k])=>s+value(r.exams[k]?.patients),0),exposure:EXAMS.reduce((s,[k])=>s+value(r.exams[k]?.exposures),0)}}
@@ -22,12 +23,84 @@
   function validate(r){const errs=[];if(total(r).visits!==payerTotal(r))errs.push('Total asal pasien harus sama dengan BPJS + Umum + Asuransi.');for(const v of [...Object.values(r.source),...Object.values(r.payer),...EXAMS.flatMap(([k])=>[r.exams[k]?.patients,r.exams[k]?.exposures])])if(v!==''&&v!=null&&(!Number.isInteger(Number(v))||Number(v)<0))errs.push('Angka harus bilangan bulat nol atau lebih.');for(const [k,label] of EXAMS)if(value(r.exams[k]?.exposures)<value(r.exams[k]?.patients))errs.push(`${label}: ekspose tidak boleh kurang dari pasien.`);return [...new Set(errs)]}
   function filled(r){return [...Object.values(r.source),...Object.values(r.payer),...EXAMS.flatMap(([k])=>[r.exams[k]?.patients,r.exams[k]?.exposures])].some(v=>v!==''&&v!=null)}
   function field(label,group,k,v){return `<label>${label}<input type="number" min="0" step="1" inputmode="numeric" value="${v??''}" data-group="${group}" data-key="${k}"></label>`}
-  function renderFields(){const r=record();$('origins').innerHTML=ORIGINS.map(([k,l])=>field(l,'source',k,r.source[k])).join('');$('payers').innerHTML=PAYERS.map(([k,l])=>field(l,'payer',k,r.payer[k])).join('');$('exams').innerHTML=['Non Kontras','Kontras'].map(g=>`<h4>${g}</h4><div class="exam-grid">${EXAMS.filter(x=>x[2]===g).map(([k,l])=>`<div class="exam-row"><strong>${l}</strong><label>Pasien<input type="number" min="0" step="1" value="${r.exams[k]?.patients??''}" data-exam="${k}" data-kind="patients"></label><label>Ekspose<input type="number" min="0" step="1" value="${r.exams[k]?.exposures??''}" data-exam="${k}" data-kind="exposures"></label></div>`).join('')}</div>`).join('');document.querySelectorAll('#origins input,#payers input,#exams input').forEach(el=>el.addEventListener('input',onInput))}
-  function summaryLine(label,n,all){return `<div class="summary-line"><span>${label}</span><strong>${fmt(n)} <small>${all?((n*100/all).toFixed(1).replace('.',',')+'%'):'0,0%'}</small></strong></div>`}
-  function render(){const m=$('month'),y=$('year');m.innerHTML=MONTHS.map((x,i)=>`<option value="${i}">${x}</option>`).join('');m.value=state.month;const years=new Set(Array.from({length:11},(_,i)=>today.getFullYear()-5+i));years.add(state.year);y.innerHTML=[...years].sort().map(v=>`<option>${v}</option>`).join('');y.value=state.year;$('date').min=keyDay(1);$('date').max=keyDay(days());$('date').value=state.date;const d=dateObj(state.date);$('caption').textContent=`${DAYS[d.getDay()]} · ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;$('caption').classList.toggle('sunday',d.getDay()===0);renderFields();const r=record(),t=total(r),errs=validate(r);$('dayVisits').textContent=fmt(t.visits);$('dayExams').textContent=fmt(t.exams);$('dayExposure').textContent=fmt(t.exposure);$('dayStatus').textContent=errs.length?'Perlu dicek':'OK';$('dayStatus').className=errs.length?'bad':'good';$('errors').innerHTML=errs.length?`<ul>${errs.map(e=>`<li>${e}</li>`).join('')}</ul>`:'Data harian valid.';
-    const origins=Object.fromEntries(ORIGINS.map(([k])=>[k,0])),payers=Object.fromEntries(PAYERS.map(([k])=>[k,0])),examSums=Object.fromEntries(EXAMS.map(([k])=>[k,{patients:0,exposures:0}]));let visits=0,exams=0,exposure=0;const issues=[],rows=[];
-    for(let i=1;i<=days();i++){const k=keyDay(i),rr=record(k),tt=total(rr),date=dateObj(k),ee=validate(rr),has=filled(rr);visits+=tt.visits;exams+=tt.exams;exposure+=tt.exposure;ORIGINS.forEach(([a])=>origins[a]+=value(rr.source[a]));PAYERS.forEach(([a])=>payers[a]+=value(rr.payer[a]));EXAMS.forEach(([a])=>{examSums[a].patients+=value(rr.exams[a]?.patients);examSums[a].exposures+=value(rr.exams[a]?.exposures)});if(has&&ee.length)issues.push(`<li><strong>${i} ${MONTHS[state.month]}:</strong> ${ee.join(' ')}</li>`);rows.push(`<tr class="${date.getDay()===0?'sunday-row ':''}${has&&ee.length?'invalid-row':''}" data-date="${k}"><td>${i}</td><td>${DAYS[date.getDay()]}</td><td>${fmt(tt.visits)}</td><td>${fmt(tt.exams)}</td><td>${fmt(tt.exposure)}</td><td>${has&&ee.length?'Perlu dicek':'OK'}</td></tr>`)}
-    $('totalVisits').textContent=fmt(visits);$('totalExams').textContent=fmt(exams);$('totalExposure').textContent=fmt(exposure);$('dailyRows').innerHTML=rows.join('');$('issues').innerHTML=issues.length?`<ul>${issues.join('')}</ul>`:'Tidak ada masalah pada tanggal yang diisi.';$('originSummary').innerHTML=ORIGINS.map(([k,l])=>summaryLine(l,origins[k],visits)).join('')+summaryLine('Total asal pasien',visits,visits);const pt=PAYERS.filter(([k])=>k!=='naker').reduce((s,[k])=>s+payers[k],0);$('payerSummary').innerHTML=PAYERS.filter(([k])=>k!=='naker').map(([k,l])=>summaryLine(l,payers[k],pt)).join('')+summaryLine('Total penjamin',pt,pt);$('naker').textContent=`Naker (keterangan): ${fmt(payers.naker)} · tidak masuk total penjamin.`;let np=0,ne=0,cp=0,ce=0;$('examSummary').innerHTML=EXAMS.map(([k,l,g])=>{const s=examSums[k];if(g==='Non Kontras'){np+=s.patients;ne+=s.exposures}else{cp+=s.patients;ce+=s.exposures}return `<tr><td>${l}</td><td>${g}</td><td>${fmt(s.patients)}</td><td>${fmt(s.exposures)}</td></tr>`}).join('')+`<tr class="subtotal"><td colspan="2">Subtotal Non Kontras</td><td>${fmt(np)}</td><td>${fmt(ne)}</td></tr><tr class="subtotal"><td colspan="2">Subtotal Kontras</td><td>${fmt(cp)}</td><td>${fmt(ce)}</td></tr><tr class="grand"><td colspan="2">Grand total</td><td>${fmt(np+cp)}</td><td>${fmt(ne+ce)}</td></tr>`}
-  function onInput(e){const el=e.target;if(el.value!==''&&(!Number.isInteger(Number(el.value))||Number(el.value)<0)){el.setCustomValidity('Masukkan bilangan bulat nol atau lebih.');el.reportValidity();return}el.setCustomValidity('');const r=record();if(el.dataset.group)r[el.dataset.group][el.dataset.key]=el.value===''?'':Number(el.value);else{r.exams[el.dataset.exam]||={};r.exams[el.dataset.exam][el.dataset.kind]=el.value===''?'':Number(el.value)}state.data[state.date]=r;save();render()}
-  $('month').addEventListener('change',()=>{state.month=Number($('month').value);state.date=keyDay(Math.min(dateObj(state.date).getDate(),days()));render()});$('year').addEventListener('change',()=>{state.year=Number($('year').value);state.date=keyDay(Math.min(dateObj(state.date).getDate(),days()));render()});$('date').addEventListener('change',e=>{if(e.target.value){state.date=e.target.value;const d=dateObj(state.date);state.month=d.getMonth();state.year=d.getFullYear();render()}});function shift(n){const d=dateObj(state.date);d.setDate(d.getDate()+n);state.date=keyOf(d);state.month=d.getMonth();state.year=d.getFullYear();render()}$('prev').addEventListener('click',()=>shift(-1));$('next').addEventListener('click',()=>shift(1));$('clear').addEventListener('click',()=>{if(!filled(record()))return;if(confirm(`Kosongkan data tanggal ${state.date}?`)){delete state.data[state.date];save();render()}});$('dailyRows').addEventListener('click',e=>{const tr=e.target.closest('[data-date]');if(tr){state.date=tr.dataset.date;render();window.scrollTo({top:0,behavior:'smooth'})}});$('excel').addEventListener('click',()=>{if(!window.XLSX){alert('Excel belum termuat. Periksa koneksi internet.');return}const data=[['Rekap Pasien Radiologi'],['Periode',`${MONTHS[state.month]} ${state.year}`],[],['Tanggal','Hari','Kunjungan','Pemeriksaan','Ekspose',...ORIGINS.map(x=>`Asal ${x[1]}`),...PAYERS.map(x=>`Penjamin ${x[1]}`)]];for(let i=1;i<=days();i++){const r=record(keyDay(i)),d=dateObj(keyDay(i)),t=total(r);data.push([i,DAYS[d.getDay()],t.visits,t.exams,t.exposure,...ORIGINS.map(([k])=>value(r.source[k])),...PAYERS.map(([k])=>value(r.payer[k]))])}data.push([],['Jenis Pemeriksaan','Kelompok','Pasien','Ekspose']);EXAMS.forEach(([k,l,g])=>{let p=0,x=0;for(let i=1;i<=days();i++){const r=record(keyDay(i));p+=value(r.exams[k]?.patients);x+=value(r.exams[k]?.exposures)}data.push([l,g,p,x])});const ws=XLSX.utils.aoa_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Rekap Bulanan');XLSX.writeFile(wb,`rekap-radiologi-${state.year}-${String(state.month+1).padStart(2,'0')}.xlsx`)});render();
+
+  /* ---------- Menu 1: Isi Data ---------- */
+  function renderFields(){const r=record();
+    $('origins').innerHTML=ORIGINS.map(([k,l])=>field(l,'source',k,r.source[k])).join('');
+    $('payers').innerHTML=PAYERS.map(([k,l])=>field(l,'payer',k,r.payer[k])).join('');
+    $('exams').innerHTML=['Non Kontras','Kontras'].map(g=>`<h4>${g}</h4><div class="exam-grid">${EXAMS.filter(x=>x[2]===g).map(([k,l])=>`<div class="exam-row"><strong>${l}</strong><label>Pasien<input type="number" min="0" step="1" value="${r.exams[k]?.patients??''}" data-exam="${k}" data-kind="patients"></label><label>Ekspose<input type="number" min="0" step="1" value="${r.exams[k]?.exposures??''}" data-exam="${k}" data-kind="exposures"></label></div>`).join('')}</div>`).join('');
+    document.querySelectorAll('#origins input,#payers input,#exams input').forEach(el=>el.addEventListener('input',onInput))}
+  function updateDay(){const r=record(),t=total(r),errs=validate(r),d=dateObj(S.date);
+    $('date').value=S.date;$('caption').textContent=longDate(S.date);$('caption').classList.toggle('sunday',d.getDay()===0);
+    $('dayVisits').textContent=fmt(t.visits);$('dayExams').textContent=fmt(t.exams);$('dayExposure').textContent=fmt(t.exposure);
+    $('dayStatus').textContent=errs.length?'Perlu dicek':'OK';$('dayStatus').className=errs.length?'bad':'good';
+    $('errors').innerHTML=errs.length?`<ul>${errs.map(e=>`<li>${e}</li>`).join('')}</ul>`:'Data harian valid.'}
+  function renderIsi(){renderFields();updateDay()}
+  function onInput(e){const el=e.target;
+    if(el.value!==''&&(!Number.isInteger(Number(el.value))||Number(el.value)<0)){el.setCustomValidity('Masukkan bilangan bulat nol atau lebih.');el.reportValidity();return}
+    el.setCustomValidity('');const r=record(),v=el.value===''?'':Number(el.value);
+    if(el.dataset.group)r[el.dataset.group][el.dataset.key]=v;else{r.exams[el.dataset.exam]||={};r.exams[el.dataset.exam][el.dataset.kind]=v}
+    state.data[S.date]=r;save();updateDay()}
+  function shift(n){const d=dateObj(S.date);d.setDate(d.getDate()+n);S.date=keyOf(d);renderIsi()}
+
+  /* ---------- Periode & agregasi ---------- */
+  function range(mode,ref){
+    if(mode==='harian')return {keys:[ref],label:longDate(ref)};
+    if(mode==='mingguan'){const d=dateObj(ref);d.setDate(d.getDate()-(d.getDay()+6)%7);const keys=[];for(let i=0;i<7;i++){keys.push(keyOf(d));d.setDate(d.getDate()+1)}return {keys,label:`${short(keys[0])} – ${short(keys[6])}`}}
+    const [y,m]=ref.slice(0,7).split('-').map(Number),n=new Date(y,m,0).getDate();
+    return {keys:Array.from({length:n},(_,i)=>`${y}-${pad(m)}-${pad(i+1)}`),label:`${MONTHS[m-1]} ${y}`}}
+  function agg(keys){
+    const o=Object.fromEntries(ORIGINS.map(([k])=>[k,0])),p=Object.fromEntries(PAYERS.map(([k])=>[k,0])),e=Object.fromEntries(EXAMS.map(([k])=>[k,{p:0,x:0}]));
+    let v=0,n=0,x=0;const rows=[];
+    keys.forEach(k=>{const r=record(k),t=total(r),errs=validate(r),has=filled(r);v+=t.visits;n+=t.exams;x+=t.exposure;
+      ORIGINS.forEach(([a])=>o[a]+=value(r.source[a]));PAYERS.forEach(([a])=>p[a]+=value(r.payer[a]));
+      EXAMS.forEach(([a])=>{e[a].p+=value(r.exams[a]?.patients);e[a].x+=value(r.exams[a]?.exposures)});
+      rows.push({k,t,errs,bad:has&&errs.length>0})});
+    return {v,n,x,o,p,e,rows}}
+  function line(label,n,all){return `<div class="summary-line"><span>${label}</span><strong>${fmt(n)} <small>${all?((n*100/all).toFixed(1).replace('.',',')+'%'):'0,0%'}</small></strong></div>`}
+  function reportHTML(keys){
+    const a=agg(keys),pt=PAYERS.filter(([k])=>k!=='naker').reduce((s,[k])=>s+a.p[k],0);
+    let np=0,ne=0,cp=0,ce=0;
+    const exRows=EXAMS.map(([k,l,g])=>{const s=a.e[k];if(g==='Non Kontras'){np+=s.p;ne+=s.x}else{cp+=s.p;ce+=s.x}return `<tr><td>${l}</td><td>${g}</td><td>${fmt(s.p)}</td><td>${fmt(s.x)}</td></tr>`}).join('')
+      +`<tr class="subtotal"><td colspan="2">Subtotal Non Kontras</td><td>${fmt(np)}</td><td>${fmt(ne)}</td></tr><tr class="subtotal"><td colspan="2">Subtotal Kontras</td><td>${fmt(cp)}</td><td>${fmt(ce)}</td></tr><tr class="grand"><td colspan="2">Grand total</td><td>${fmt(np+cp)}</td><td>${fmt(ne+ce)}</td></tr>`;
+    const daily=keys.length>1?`<div class="panel"><div class="section-title"><h2>Per hari</h2></div><div class="scroll"><table><thead><tr><th>Tanggal</th><th>Hari</th><th>Kunjungan</th><th>Pemeriksaan</th><th>Ekspose</th><th>Status</th></tr></thead><tbody>${a.rows.map(({k,t,bad})=>{const d=dateObj(k);return `<tr class="${d.getDay()===0?'sunday-row ':''}${bad?'invalid-row':''}"><td>${short(k)}</td><td>${DAYS[d.getDay()]}</td><td>${fmt(t.visits)}</td><td>${fmt(t.exams)}</td><td>${fmt(t.exposure)}</td><td>${bad?'Perlu dicek':'OK'}</td></tr>`}).join('')}</tbody></table></div></div>`:'';
+    const bad=a.rows.filter(r=>r.bad),issues=bad.length?`<div class="panel"><div class="section-title"><h2>Pengecekan</h2></div><div class="issues"><ul>${bad.map(r=>`<li><strong>${short(r.k)}:</strong> ${[...new Set(r.errs)].join(' ')}</li>`).join('')}</ul></div></div>`:'';
+    return `<section class="cards"><article><span>Kunjungan</span><strong>${fmt(a.v)}</strong></article><article><span>Pemeriksaan</span><strong>${fmt(a.n)}</strong></article><article><span>Ekspose</span><strong>${fmt(a.x)}</strong></article></section>
+    <div class="panel"><div class="summary-grid"><article><h3>Asal pasien</h3>${ORIGINS.map(([k,l])=>line(l,a.o[k],a.v)).join('')+line('Total asal pasien',a.v,a.v)}</article><article><h3>Penjamin</h3>${PAYERS.filter(([k])=>k!=='naker').map(([k,l])=>line(l,a.p[k],pt)).join('')+line('Total penjamin',pt,pt)}<p class="hint">Naker (keterangan): ${fmt(a.p.naker)} · tidak masuk total penjamin.</p></article></div>
+    <article class="exam-summary"><h3>Jenis pemeriksaan</h3><div class="scroll"><table><thead><tr><th>Jenis</th><th>Kelompok</th><th>Pasien</th><th>Ekspose</th></tr></thead><tbody>${exRows}</tbody></table></div></article></div>${daily}${issues}`}
+
+  /* ---------- Kontrol periode (dipakai Menu 2 & 3) ---------- */
+  function controls(el,st,cb){
+    const m=st.mode==='bulanan',lbl=m?'Bulan':st.mode==='mingguan'?'Tanggal dalam minggu':'Tanggal';
+    el.innerHTML=`<div class="seg">${['harian','mingguan','bulanan'].map(x=>`<button type="button" class="${x===st.mode?'on':''}" data-mode="${x}">${x[0].toUpperCase()+x.slice(1)}</button>`).join('')}</div><label>${lbl}<input type="${m?'month':'date'}" value="${m?st.ref.slice(0,7):st.ref}"></label><span class="muted">${range(st.mode,st.ref).label}</span>`;
+    el.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{const n=b.dataset.mode;if(n==='bulanan')st.ref=st.ref.slice(0,7);else if(st.ref.length===7)st.ref+='-01';st.mode=n;cb()});
+    el.querySelector('input').onchange=e=>{if(e.target.value){st.ref=e.target.value.length===7&&st.mode!=='bulanan'?e.target.value+'-01':e.target.value;cb()}}}
+  function renderRekap(){controls($('rekapCtl'),S.rek,renderRekap);$('rekapOut').innerHTML=reportHTML(range(S.rek.mode,S.rek.ref).keys)}
+
+  /* ---------- Menu 3: Export ---------- */
+  function renderExport(){controls($('expCtl'),S.exp,renderExport);const r=range(S.exp.mode,S.exp.ref),a=agg(r.keys);
+    $('expInfo').textContent=`Periode ${S.exp.mode}: ${r.label} · Kunjungan ${fmt(a.v)} · Pemeriksaan ${fmt(a.n)} · Ekspose ${fmt(a.x)}`}
+  function exportExcel(){if(!window.XLSX){alert('Excel belum termuat. Periksa koneksi internet.');return}
+    const r=range(S.exp.mode,S.exp.ref),a=agg(r.keys);
+    const rows=[['Rekap Pasien Radiologi · RS Setia Mitra'],['Periode',`${S.exp.mode} · ${r.label}`],[],['Tanggal','Hari','Kunjungan','Pemeriksaan','Ekspose',...ORIGINS.map(x=>`Asal ${x[1]}`),...PAYERS.map(x=>`Penjamin ${x[1]}`)]];
+    r.keys.forEach(k=>{const rec=record(k),t=total(rec);rows.push([short(k),DAYS[dateObj(k).getDay()],t.visits,t.exams,t.exposure,...ORIGINS.map(([c])=>value(rec.source[c])),...PAYERS.map(([c])=>value(rec.payer[c]))])});
+    rows.push(['Total','',a.v,a.n,a.x,...ORIGINS.map(([c])=>a.o[c]),...PAYERS.map(([c])=>a.p[c])]);
+    const ex=[['Jenis Pemeriksaan','Kelompok','Pasien','Ekspose'],...EXAMS.map(([k,l,g])=>[l,g,a.e[k].p,a.e[k].x]),['Grand total','',a.n,a.x]];
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Rekap');XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(ex),'Pemeriksaan');
+    XLSX.writeFile(wb,`rekap-radiologi-${S.exp.mode}-${r.keys[0]}.xlsx`)}
+  function exportPdf(){const r=range(S.exp.mode,S.exp.ref);
+    $('printArea').innerHTML=`<div class="rpt-head"><p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p><h1>Rekap Pasien Radiologi</h1><p class="muted">Periode ${S.exp.mode}: ${r.label}</p></div>${reportHTML(r.keys)}`;window.print()}
+
+  /* ---------- Navigasi ---------- */
+  function show(v){if(!['isi','rekap','export'].includes(v))v='isi';S.view=v;
+    document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
+    document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
+    if(v==='isi')renderIsi();if(v==='rekap')renderRekap();if(v==='export')renderExport();
+    history.replaceState(null,'','#'+v);window.scrollTo({top:0})}
+  document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
+  $('date').addEventListener('change',e=>{if(e.target.value){S.date=e.target.value;renderIsi()}});
+  $('prev').addEventListener('click',()=>shift(-1));$('next').addEventListener('click',()=>shift(1));
+  $('clear').addEventListener('click',()=>{if(!filled(record()))return;if(confirm(`Kosongkan data tanggal ${S.date}?`)){delete state.data[S.date];save();renderIsi()}});
+  $('xls').addEventListener('click',exportExcel);$('pdf').addEventListener('click',exportPdf);
+  show(location.hash.slice(1));
 })();

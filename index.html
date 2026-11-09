@@ -4,42 +4,51 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f3f6f8">
-  <meta name="description" content="Prototype rekap jumlah pasien dan pemeriksaan radiologi.">
+  <meta name="description" content="Rekap jumlah pasien dan pemeriksaan radiologi.">
   <title>Rekap Pasien Radiologi</title>
-  <link rel="stylesheet" href="./styles.css?v=final-1">
+  <link rel="stylesheet" href="./styles.css?v=v3">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
-  <script src="./app.js?v=final-1" defer></script>
+  <script src="./app.js?v=v3" defer></script>
 </head>
 <body>
   <main class="shell">
     <header class="top">
-      <div><p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p><h1>Rekap Pasien Radiologi</h1><p class="muted">Input jumlah harian dan lihat ringkasan otomatis per bulan.</p></div>
-      <div class="period">
-        <label>Bulan<select id="month"></select></label>
-        <label>Tahun<select id="year"></select></label>
-        <button id="excel" class="secondary" type="button">Unduh Excel</button>
-        <button id="print" class="secondary" type="button">Cetak / PDF</button>
-      </div>
+      <div><p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p><h1>Rekap Pasien Radiologi</h1></div>
+      <nav class="nav" aria-label="Menu utama">
+        <button type="button" data-view="isi">Isi Data</button>
+        <button type="button" data-view="rekap">Lihat Rekapan</button>
+        <button type="button" data-view="export">Export</button>
+      </nav>
     </header>
-    <aside class="notice"><strong>Prototype publik:</strong> Situs ini tidak memiliki login atau database server. Data hanya disimpan di browser yang digunakan dan kode web dapat dilihat publik. Jangan masukkan data pasien atau informasi rahasia.</aside>
-    <section class="cards"><article><span>Kunjungan</span><strong id="totalVisits">-</strong></article><article><span>Pemeriksaan</span><strong id="totalExams">-</strong></article><article><span>Ekspose</span><strong id="totalExposure">-</strong></article></section>
-    <section class="panel">
-      <div class="section-title"><div><p class="eyebrow">Entri</p><h2>Input harian</h2></div><div class="date-nav"><button id="prev" type="button" aria-label="Hari sebelumnya">‹</button><label>Tanggal<input id="date" type="date"></label><button id="next" type="button" aria-label="Hari berikutnya">›</button></div></div>
-      <p id="caption" class="muted"></p>
+    <aside class="notice"><strong>Prototype publik:</strong> data hanya tersimpan di browser ini dan kode web dapat dilihat publik. Jangan masukkan data pasien atau informasi rahasia.</aside>
+
+    <section id="v-isi" class="view panel">
+      <div class="section-title"><div><p class="eyebrow">Menu 1</p><h2>Isi Data</h2><p id="caption" class="muted"></p></div>
+        <div class="date-nav"><button id="prev" type="button" aria-label="Hari sebelumnya">‹</button><label>Tanggal<input id="date" type="date"></label><button id="next" type="button" aria-label="Hari berikutnya">›</button></div></div>
       <div class="form-grid"><section><h3>Asal pasien</h3><div id="origins" class="fields"></div></section><section><h3>Penjamin</h3><p class="hint">Naker hanya keterangan, tidak dihitung dalam total penjamin.</p><div id="payers" class="fields"></div></section></div>
       <section class="exam-section"><h3>Jenis pemeriksaan</h3><p class="hint">Nilai kosong dianggap 0. Ekspose harus sama dengan atau lebih besar dari pasien.</p><div id="exams"></div></section>
       <div class="daily-summary"><span>Kunjungan <b id="dayVisits">-</b></span><span>Pemeriksaan <b id="dayExams">-</b></span><span>Ekspose <b id="dayExposure">-</b></span><span>Status <b id="dayStatus">OK</b></span></div>
       <div id="errors" class="errors" aria-live="polite"></div>
       <div class="footer-row"><span id="saved" class="hint">Tersimpan otomatis di browser.</span><button id="clear" class="danger" type="button">Kosongkan tanggal</button></div>
     </section>
-    <section class="panel"><div class="section-title"><div><p class="eyebrow">Kontrol data</p><h2>Pengecekan harian</h2></div></div><div id="issues" class="issues muted">Belum ada masalah pada tanggal yang diisi.</div></section>
-    <section class="panel"><div class="section-title"><div><p class="eyebrow">Ringkasan periode</p><h2>Rekap bulanan</h2></div></div><div class="summary-grid"><article><h3>Asal pasien</h3><div id="originSummary"></div></article><article><h3>Penjamin</h3><div id="payerSummary"></div><p id="naker" class="hint"></p></article></div><article class="exam-summary"><h3>Jenis pemeriksaan</h3><div class="scroll"><table><thead><tr><th>Jenis</th><th>Kelompok</th><th>Pasien</th><th>Ekspose</th></tr></thead><tbody id="examSummary"></tbody></table></div></article></section>
-    <section class="panel"><div class="section-title"><div><p class="eyebrow">Tampilan seperti spreadsheet</p><h2>Data harian bulan ini</h2></div></div><div class="scroll"><table><thead><tr><th>Tanggal</th><th>Hari</th><th>Kunjungan</th><th>Pemeriksaan</th><th>Ekspose</th><th>Status</th></tr></thead><tbody id="dailyRows"></tbody></table></div></section>
+
+    <section id="v-rekap" class="view">
+      <div class="panel"><div class="section-title"><div><p class="eyebrow">Menu 2</p><h2>Lihat Rekapan</h2></div></div><div id="rekapCtl" class="ctl"></div></div>
+      <div id="rekapOut"></div>
+    </section>
+
+    <section id="v-export" class="view panel">
+      <div class="section-title"><div><p class="eyebrow">Menu 3</p><h2>Export</h2></div></div>
+      <div id="expCtl" class="ctl"></div>
+      <p id="expInfo" class="muted"></p>
+      <div class="export-opts">
+        <article><h3>Excel (.xlsx)</h3><p class="hint">Rekap per hari dan per jenis pemeriksaan.</p><button id="xls" class="secondary" type="button">Unduh Excel</button></article>
+        <article><h3>PDF / Cetak</h3><p class="hint">Buka dialog cetak, lalu pilih “Simpan sebagai PDF”.</p><button id="pdf" class="secondary" type="button">Cetak / PDF</button></article>
+      </div>
+    </section>
+
+    <div id="printArea"></div>
     <footer>Versi online gratis · penyimpanan lokal perangkat · bukan untuk data pasien nyata</footer>
   </main>
-  <script>
-    // Use browser print dialog for PDF; save as PDF from the print destination.
-    document.addEventListener('DOMContentLoaded',()=>document.getElementById('print')?.addEventListener('click',()=>window.print()));
-  </script>
 </body>
 </html>
