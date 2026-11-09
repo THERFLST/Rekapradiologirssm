@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#f3f6f8">
   <meta name="description" content="Rekap jumlah pasien dan pemeriksaan radiologi.">
   <title>Rekap Pasien Radiologi</title>
-  <link rel="stylesheet" href="./styles.css?v=v3">
+  <link rel="stylesheet" href="./styles.css?v=v5">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
-  <script src="./app.js?v=v3" defer></script>
+  <script src="./app.js?v=v5" defer></script>
 </head>
 <body>
   <main class="shell">
@@ -17,10 +17,10 @@
       <nav class="nav" aria-label="Menu utama">
         <button type="button" data-view="isi">Isi Data</button>
         <button type="button" data-view="rekap">Lihat Rekapan</button>
+        <button type="button" data-view="total">Total</button>
         <button type="button" data-view="export">Export</button>
       </nav>
     </header>
-    <aside class="notice"><strong>Prototype publik:</strong> data hanya tersimpan di browser ini dan kode web dapat dilihat publik. Jangan masukkan data pasien atau informasi rahasia.</aside>
 
     <section id="v-isi" class="view panel">
       <div class="section-title"><div><p class="eyebrow">Menu 1</p><h2>Isi Data</h2><p id="caption" class="muted"></p></div>
@@ -37,8 +37,13 @@
       <div id="rekapOut"></div>
     </section>
 
+    <section id="v-total" class="view panel">
+      <div class="section-title"><div><p class="eyebrow">Ringkasan keseluruhan</p><h2>Total</h2><p class="muted">Akumulasi seluruh data yang tersimpan di browser ini.</p></div></div>
+      <div id="totalOut" class="cards" aria-live="polite"></div>
+    </section>
+
     <section id="v-export" class="view panel">
-      <div class="section-title"><div><p class="eyebrow">Menu 3</p><h2>Export</h2></div></div>
+      <div class="section-title"><div><p class="eyebrow">Menu 4</p><h2>Export</h2></div></div>
       <div id="expCtl" class="ctl"></div>
       <p id="expInfo" class="muted"></p>
       <div class="export-opts">
