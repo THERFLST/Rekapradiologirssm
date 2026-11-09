@@ -6,10 +6,11 @@
   <meta name="theme-color" content="#f3f6f8">
   <meta name="description" content="Rekap jumlah pasien dan pemeriksaan radiologi.">
   <title>Rekap Pasien Radiologi</title>
-  <link rel="stylesheet" href="./styles.css?v=v5">
+  <link rel="stylesheet" href="./styles.css?v=v6">
+  <link rel="stylesheet" href="./total.css?v=v1">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
-  <script src="./app.js?v=v5" defer></script>
-  <script src="./total.js?v=v1" defer></script>
+  <script src="./app.js?v=v6" defer></script>
+  <script src="./total.js?v=v2" defer></script>
 </head>
 <body>
   <main class="shell">
@@ -39,8 +40,8 @@
     </section>
 
     <section id="v-total" class="view panel">
-      <div class="section-title"><div><p class="eyebrow">Ringkasan keseluruhan</p><h2>Total</h2><p class="muted">Akumulasi seluruh data yang tersimpan di browser ini.</p></div></div>
-      <div id="totalOut" class="cards" aria-live="polite"></div>
+      <div class="section-title"><div><p class="eyebrow">Rekap seluruh periode</p><h2>Total</h2><p class="muted">Ringkasan total dan rincian per bulan dari seluruh data rekap tersimpan.</p></div></div>
+      <div id="totalOut" aria-live="polite"></div>
     </section>
 
     <section id="v-export" class="view panel">
@@ -54,7 +55,7 @@
     </section>
 
     <div id="printArea"></div>
-    <footer>Versi online gratis · penyimpanan lokal perangkat · bukan untuk data pasien nyata</footer>
+    <footer>Rekap statistik radiologi · Data tersimpan pada browser/perangkat ini.</footer>
   </main>
 </body>
 </html>

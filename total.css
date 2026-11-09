@@ -1,0 +1,15 @@
+/* Monthly totals page */
+#v-total .total-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0 18px}
+#v-total .total-cards article{display:flex;flex-direction:column;gap:8px;padding:18px;border:1px solid #e2e9ec;border-radius:12px;background:#fff}
+#v-total .total-cards span{color:#62727a;font-size:13px;font-weight:600}
+#v-total .total-cards strong{color:#105544;font-size:26px}
+#v-total .total-monthly{margin-top:16px}
+#v-total .total-monthly h3{margin:0;font-size:17px}
+#v-total .total-monthly .section-title{margin-bottom:12px}
+#v-total .total-monthly table{width:100%;border-collapse:collapse}
+#v-total .total-monthly th,#v-total .total-monthly td{padding:12px 14px;text-align:right;border-bottom:1px solid #e2e9ec;white-space:nowrap}
+#v-total .total-monthly th:first-child,#v-total .total-monthly td:first-child{text-align:left}
+#v-total .total-monthly thead th{color:#62727a;font-size:12px;background:#f8fafb}
+#v-total .total-monthly tfoot th,#v-total .total-monthly tfoot td{font-weight:750;background:#f5f8f8;border-bottom:0}
+#v-total .total-monthly .total-empty{text-align:center;color:#62727a;padding:24px}
+@media(max-width:640px){#v-total .total-cards{grid-template-columns:1fr;gap:8px}#v-total .total-cards article{padding:14px}#v-total .total-cards strong{font-size:22px}#v-total .total-monthly th,#v-total .total-monthly td{padding:10px 12px;font-size:12px}}
