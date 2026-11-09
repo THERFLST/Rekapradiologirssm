@@ -15,6 +15,19 @@ Versi yang ada sekarang adalah prototype yang sudah mencakup:
 - penguncian bulan untuk admin
 - login demo dengan dua peran: Admin dan Petugas
 - ekspor file Excel dan PDF
+- import data Excel untuk modul Laporan Waktu Pelayanan
+- deteksi sheet `THORAX` bila tersedia; jika tidak, filter pemeriksaan Thorax dari sheet data tarik
+- pembentukan laporan Pemantauan, Evaluasi, dan Tindak Lanjut secara otomatis
+- ekspor laporan Thorax ke Excel dan cetak / simpan sebagai PDF
+- data identitas pasien (nama, No. RM, dan No. registrasi) tidak disimpan pada data hasil import
+
+## Import dan laporan waktu tunggu Thorax
+
+Pada menu **Laporan Waktu Pelayanan**, pilih file `.xlsx` atau `.xls`, lalu klik **Baca & Pratinjau**. Aplikasi memprioritaskan sheet bernama `THORAX`; bila sheet tersebut tidak ada, aplikasi mencari sheet dengan header data tarik dan menyaring baris yang nama pemeriksaannya mengandung `Thorax`.
+
+Durasi diambil dari kolom `Selisih Waktu (Selesai-Konfirmasi)` dan `Selisih Waktu (Selesai-Kedatangan)` bila tersedia. Nilai durasi Excel dibaca sebagai komponen jam (jam-menit-detik), bukan dihitung dari perbedaan tanggal. Klasifikasi mengikuti logika Excel: nilai di bawah 8 jam masuk kelompok kurang dari 8 jam; nilai 8 jam atau lebih masuk kelompok lebih dari 8 jam; nilai kosong menjadi data tidak lengkap. Rata-rata dihitung dari data dengan durasi kedatangan yang tersedia.
+
+Laporan yang terbentuk langsung dapat diunduh sebagai Excel atau dicetak / disimpan sebagai PDF. Upload ulang file yang sama tidak menggandakan data yang sudah tersimpan. File ekspor memuat sheet `LAPORAN` dan `DATA THORAX` yang sudah dideidentifikasi.
 
 ## Catatan keamanan penting
 
