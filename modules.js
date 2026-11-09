@@ -403,6 +403,12 @@
     if (!section) return;
 
     section.innerHTML = `
+      <nav class="nav usg-nav" aria-label="Navigasi rekap USG">
+        <button type="button" data-usg-view="isi" class="on">Isi Data</button>
+        <button type="button" data-usg-view="rekap">Lihat Rekapan</button>
+        <button type="button" data-usg-view="export">Export</button>
+      </nav>
+      <div id="usg-isi-view" class="usg-subview">
       <div class="section-title">
         <div>
           <p class="eyebrow">Modul USG</p>
@@ -444,7 +450,8 @@
         <span id="usgSaved" class="hint">Tersimpan otomatis di browser.</span>
       </div>
 
-      <section class="panel">
+      </div>
+      <section id="usg-rekap-view" class="panel usg-subview" hidden>
         <div class="section-title">
           <div>
             <p class="eyebrow">Rekap USG</p>
@@ -453,9 +460,10 @@
         </div>
         <div id="usgReportControls" class="ctl"></div>
         <div id="usgReportOutput"></div>
-        <div class="footer-row">
-          <button id="usgExport" class="secondary" type="button">Unduh Excel</button>
-        </div>
+      </section>
+      <section id="usg-export-view" class="panel usg-subview" hidden>
+        <div class="section-title"><div><p class="eyebrow">Rekap USG</p><h2>Export Data</h2><p class="muted">Unduh rekap sesuai periode yang dipilih pada menu Lihat Rekapan.</p></div></div>
+        <button id="usgExport" class="secondary" type="button">Unduh Excel</button>
       </section>
     `;
 
@@ -489,6 +497,14 @@
     });
 
     $('usgExport')?.addEventListener('click', exportUsgExcel);
+    section.querySelectorAll('[data-usg-view]').forEach((button) => button.addEventListener('click', () => {
+      usgState.view = button.dataset.usgView;
+      section.querySelectorAll('[data-usg-view]').forEach((item) => item.classList.toggle('on', item === button));
+      section.querySelectorAll('.usg-subview').forEach((view) => { view.hidden = view.id !== `usg-${usgState.view}-view`; });
+      if (usgState.view === 'rekap') renderUsgReport();
+    }));
+    section.querySelectorAll('.usg-subview').forEach((view) => { view.hidden = view.id !== `usg-${usgState.view}-view`; });
+    section.querySelectorAll('[data-usg-view]').forEach((button) => button.classList.toggle('on', button.dataset.usgView === usgState.view));
 
     renderUsgForm();
     renderUsgReport();
@@ -585,7 +601,8 @@
 
   const usgState = {
     date: todayKey(),
-    report: { mode: 'bulanan', ref: todayKey().slice(0, 7) }
+    report: { mode: 'bulanan', ref: todayKey().slice(0, 7) },
+    view: 'isi'
   };
 
   function setModule(module) {
@@ -595,6 +612,8 @@
     if (toggle) toggle.setAttribute('aria-expanded', 'false');
 
     const moduleTarget = `v-${module}`;
+    const subtitle = document.getElementById('activeModuleSubtitle');
+    if (subtitle) subtitle.textContent = ({ konvensional: 'Rekap Konvensional', usg: 'Rekap USG', waktu: 'Laporan Waktu Pelayanan', master: 'Master Pemeriksaan' })[module] || ''; 
     document.querySelectorAll('.view').forEach((view) => {
       const shouldHide = view.id !== moduleTarget && !['v-usg', 'v-waktu'].includes(view.id);
       if (shouldHide) {

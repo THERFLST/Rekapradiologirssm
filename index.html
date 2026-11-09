@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f3f6f8">
   <meta name="description" content="Rekap jumlah pasien dan pemeriksaan radiologi.">
-  <title>Rekap Pasien Radiologi</title>
+  <title>Sistem Rekapitulasi Radiologi</title>
   <link rel="stylesheet" href="./styles.css?v=v4">
   <link rel="stylesheet" href="./modules.css?v=v2">
   <link rel="stylesheet" href="./auth.css?v=v1">
@@ -37,7 +37,7 @@
 
   <main class="shell">
     <header class="top">
-      <div><p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p><h1>Rekap Pasien Radiologi</h1></div>
+      <div><p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p><h1>Sistem Rekapitulasi Radiologi</h1><p id="activeModuleSubtitle" class="muted">Rekap Konvensional</p></div>
       <div class="main-menu-wrap">
         <button id="mainMenuToggle" class="main-menu-toggle" type="button" aria-label="Buka menu utama" aria-expanded="false" aria-controls="mainMenu">☰</button>
         <nav id="mainMenu" class="main-menu" aria-label="Menu utama" hidden>
@@ -51,7 +51,6 @@
       <nav class="nav conventional-nav" aria-label="Menu rekap konvensional">
         <button type="button" data-view="isi">Isi Data</button>
         <button type="button" data-view="rekap">Lihat Rekapan</button>
-        <button type="button" data-view="total">Total</button>
         <button type="button" data-view="export">Export</button>
       </nav>
     </header>
@@ -71,11 +70,6 @@
       <div id="rekapOut"></div>
     </section>
 
-    <section id="v-total" class="view panel">
-      <div class="section-title"><div><p class="eyebrow">Rekap Konvensional</p><h2>Total</h2><p class="muted">Ringkasan total dan rincian keseluruhan.</p></div></div>
-      <div id="totalOut" aria-live="polite"></div>
-    </section>
-
     <section id="v-export" class="view panel">
       <div class="section-title"><div><p class="eyebrow">Rekap Konvensional</p><h2>Export</h2></div></div>
       <div id="expCtl" class="ctl"></div><p id="expInfo" class="muted"></p>
@@ -87,16 +81,16 @@
 
     <section id="v-usg" class="view panel module-view" hidden></section>
     <section id="v-waktu" class="view panel module-view" hidden>
-      <div class="section-title"><div><p class="eyebrow">Modul 3</p><h2>Waktu Pelayanan Pemeriksaan</h2><p class="muted">Unggah file Excel atau PDF, pilih bulan dan tahun laporan, lalu unduh PDF untuk periode tersebut.</p></div></div>
+      <div class="section-title"><div><p class="eyebrow">Laporan Waktu Pelayanan</p><h2>Waktu Pelayanan Pemeriksaan</h2><p class="muted">Unggah file Excel atau PDF, pilih bulan dan tahun laporan, lalu unduh PDF untuk periode tersebut.</p></div></div>
       <section id="serviceImportPanel" class="service-import-panel">
         <label class="service-upload-zone" for="serviceImportFile">
           <span class="service-upload-icon" aria-hidden="true">↑</span>
           <strong>Unggah file Excel atau PDF</strong>
-          <span>Pilih file .xlsx, .xls, atau PDF berisi tabel data pemeriksaan. Setelah data terbaca, pilih bulan dan tahun untuk membuat PDF periode tersebut.</span>
-          <input id="serviceImportFile" type="file" accept=".xlsx,.xls,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+          <span>Pilih periode bulan dan tahun terlebih dahulu sebelum mengunggah file. Seluruh data pada periode terpilih akan dimasukkan ke laporan PDF.</span>
+          <input id="serviceImportFile" type="file" accept=".xlsx,.xls,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" disabled>
         </label>
         <div class="service-period-filter" aria-label="Periode laporan">
-          <label for="servicePeriod">Periode bulan dan tahun<input id="servicePeriod" type="month"></label>
+          <label for="servicePeriod">Periode bulan dan tahun<input id="servicePeriod" type="month" required></label>
           <button id="serviceDownloadPdf" class="secondary" type="button" disabled>Unduh Laporan PDF</button>
         </div>
         <p id="serviceImportStatus" class="service-import-status" role="status" aria-live="polite">Belum ada file yang diunggah.</p>

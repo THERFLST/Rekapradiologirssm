@@ -92,12 +92,12 @@
   function exportPdf(){const r=range(S.exp.mode,S.exp.ref);$('printArea').innerHTML=`<div class="rpt-head"><p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p><h1>Rekap Pasien Radiologi</h1><p class="muted">Periode ${S.exp.mode}: ${r.label}</p></div><div class="panel">${reportHTML(r.keys)}</div>`;window.print()}
 
   /* ---------- Navigasi ---------- */
-  function show(v){if(!['isi','rekap','total','export'].includes(v))v='isi';S.view=v;
+  function show(v){if(!['isi','rekap','export'].includes(v))v='isi';S.view=v;
     document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
-    document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
+    document.querySelectorAll('.conventional-nav button').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
     if(v==='isi')renderIsi();if(v==='rekap')renderRekap();if(v==='export')renderExport();
     history.replaceState(null,'','#'+v);window.scrollTo({top:0})}
-  document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
+  document.querySelectorAll('.conventional-nav button').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
   $('date').addEventListener('change',e=>{if(e.target.value){S.date=e.target.value;renderIsi()}});
   $('prev').addEventListener('click',()=>shift(-1));$('next').addEventListener('click',()=>shift(1));
   $('clear').addEventListener('click',()=>{if(!filled(record()))return;if(confirm(`Kosongkan data tanggal ${S.date}?`)){delete state.data[S.date];save();renderIsi()}});

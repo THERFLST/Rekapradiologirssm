@@ -178,7 +178,6 @@
     const allRecords = parsedSheets.flatMap((sheet) => sheet.records);
     if (!allRecords.length) throw new Error('Tidak ditemukan baris data pemeriksaan pada file.');
     const thoraxRecords = allRecords.filter((record) => record.isThorax);
-    if (!thoraxRecords.length) throw new Error('Data berhasil dibaca, tetapi tidak ditemukan baris pemeriksaan Thorax untuk laporan waktu pelayanan.');
     const complete = thoraxRecords.filter((record) => record.status !== 'Data Tidak Lengkap' && Number.isFinite(record.arrivalMinutes));
     const under = complete.filter((record) => record.arrivalMinutes < 480).length;
     const over = complete.length - under;
@@ -192,7 +191,7 @@
 
   function buildReport(workbook) {
     const parsedSheets = workbook.SheetNames.map((name) => {
-      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1, raw: true, defval: '', blankrows: true });
+      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1, raw: true, defval: '', blankrows: false, range: workbook.Sheets[name]['!ref'] || undefined });
       return parseSheet(rows, name);
     }).filter((sheet) => sheet && sheet.records.length > 0);
     if (!parsedSheets.length) throw new Error('Format Excel belum dikenali. Pastikan terdapat header Pemeriksaan, Waktu Kedatangan, dan Waktu Selesai.');
@@ -207,9 +206,9 @@
     // pada bulan berikutnya; memakai tanggal kedatangan/selesai lebih dahulu
     // membuat banyak baris sah terbuang dari laporan bulan asalnya.
     const inPeriod = (record) => {
-      const dates = [record.registrationDate, record.arrivalDate, record.completionDate].filter(Boolean);
       if (!period) return true;
-      return dates.some((date) => dateKey(date).slice(0, 7) === period);
+      const referenceDate = record.registrationDate || record.arrivalDate || record.completionDate;
+      return Boolean(referenceDate && dateKey(referenceDate).slice(0, 7) === period);
     };
     const allRecords = report.allRecords.filter(inPeriod);
     const records = allRecords.filter((record) => record.isThorax);
@@ -288,6 +287,7 @@
     const status = $('serviceImportStatus');
     const result = $('serviceReportResult');
     if (!file) return;
+    if (!$('servicePeriod')?.value) { status.textContent = 'Pilih periode bulan dan tahun terlebih dahulu sebelum mengunggah file.'; $('serviceImportFile').value = ''; return; }
     result.hidden = true; $('serviceReportContent').replaceChildren(); $('serviceDownloadPdf').disabled = true;
     $('serviceCurrentReport')._report = null;
     status.textContent = `Membaca seluruh isi ${file.name}…`;
@@ -417,11 +417,24 @@
     const input = $('serviceImportFile');
     if (!input) return;
     input.addEventListener('change', () => handleFile(input.files?.[0]));
+    input.disabled = true;
     const periodInput = $('servicePeriod');
     if (periodInput) {
       const now = new Date();
       periodInput.value = '';
-      periodInput.addEventListener('change', applyAndRender);
+      periodInput.addEventListener('change', () => {
+        input.disabled = !periodInput.value;
+        if (!periodInput.value) {
+          input.value = '';
+          $('serviceCurrentReport')._report = null;
+          $('serviceReportResult').hidden = true;
+          $('serviceDownloadPdf').disabled = true;
+          $('serviceImportStatus').textContent = 'Pilih periode bulan dan tahun sebelum mengunggah file.';
+        } else {
+          applyAndRender();
+          $('serviceImportStatus').textContent = 'Periode dipilih. Silakan unggah file Excel atau PDF.';
+        }
+      });
     }
     $('serviceDownloadPdf').addEventListener('click', downloadPdf);
   }
