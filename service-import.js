@@ -416,25 +416,35 @@
   function init() {
     const input = $('serviceImportFile');
     if (!input) return;
-    input.addEventListener('change', () => handleFile(input.files?.[0]));
-    input.disabled = true;
     const periodInput = $('servicePeriod');
+    // Hindari disabled dinamis pada input file di dalam label karena beberapa
+    // browser mobile tidak membuka file picker setelah statusnya diubah.
+    input.disabled = false;
+    input.addEventListener('click', (event) => {
+      if (!periodInput?.value) {
+        event.preventDefault();
+        $('serviceImportStatus').textContent = 'Pilih periode bulan dan tahun terlebih dahulu sebelum mengunggah file.';
+        periodInput?.focus();
+      }
+    });
+    input.addEventListener('change', () => handleFile(input.files?.[0]));
     if (periodInput) {
-      const now = new Date();
       periodInput.value = '';
-      periodInput.addEventListener('change', () => {
-        input.disabled = !periodInput.value;
+      const syncPeriod = () => {
         if (!periodInput.value) {
           input.value = '';
           $('serviceCurrentReport')._report = null;
           $('serviceReportResult').hidden = true;
           $('serviceDownloadPdf').disabled = true;
-          $('serviceImportStatus').textContent = 'Pilih periode bulan dan tahun sebelum mengunggah file.';
-        } else {
+          $('serviceImportStatus').textContent = 'Pilih bulan dan tahun sebelum mengunggah file.';
+        } else if ($('serviceCurrentReport')._report) {
           applyAndRender();
-          $('serviceImportStatus').textContent = 'Periode dipilih. Silakan unggah file Excel atau PDF.';
+        } else {
+          $('serviceImportStatus').textContent = 'Periode dipilih. Silakan pilih file Excel atau PDF.';
         }
-      });
+      };
+      periodInput.addEventListener('input', syncPeriod);
+      periodInput.addEventListener('change', syncPeriod);
     }
     $('serviceDownloadPdf').addEventListener('click', downloadPdf);
   }

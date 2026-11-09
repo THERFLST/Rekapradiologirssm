@@ -403,7 +403,7 @@
     if (!section) return;
 
     section.innerHTML = `
-      <nav class="nav usg-nav" aria-label="Navigasi rekap USG">
+      <nav class="nav usg-nav" aria-label="Navigasi rekap USG" role="tablist">
         <button type="button" data-usg-view="isi" class="on">Isi Data</button>
         <button type="button" data-usg-view="rekap">Lihat Rekapan</button>
         <button type="button" data-usg-view="export">Export</button>
@@ -499,12 +499,22 @@
     $('usgExport')?.addEventListener('click', exportUsgExcel);
     section.querySelectorAll('[data-usg-view]').forEach((button) => button.addEventListener('click', () => {
       usgState.view = button.dataset.usgView;
-      section.querySelectorAll('[data-usg-view]').forEach((item) => item.classList.toggle('on', item === button));
-      section.querySelectorAll('.usg-subview').forEach((view) => { view.hidden = view.id !== `usg-${usgState.view}-view`; });
+      section.querySelectorAll('[data-usg-view]').forEach((item) => {
+        const active = item === button;
+        item.classList.toggle('on', active);
+        item.setAttribute('aria-selected', String(active));
+      });
+      section.querySelectorAll('.usg-subview').forEach((view) => {
+        view.hidden = view.id !== `usg-${usgState.view}-view`;
+      });
       if (usgState.view === 'rekap') renderUsgReport();
     }));
     section.querySelectorAll('.usg-subview').forEach((view) => { view.hidden = view.id !== `usg-${usgState.view}-view`; });
-    section.querySelectorAll('[data-usg-view]').forEach((button) => button.classList.toggle('on', button.dataset.usgView === usgState.view));
+    section.querySelectorAll('[data-usg-view]').forEach((button) => {
+      const active = button.dataset.usgView === usgState.view;
+      button.classList.toggle('on', active);
+      button.setAttribute('aria-selected', String(active));
+    });
 
     renderUsgForm();
     renderUsgReport();

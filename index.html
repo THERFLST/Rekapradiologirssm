@@ -7,7 +7,7 @@
   <meta name="description" content="Rekap jumlah pasien dan pemeriksaan radiologi.">
   <title>Sistem Rekapitulasi Radiologi</title>
   <link rel="stylesheet" href="./styles.css?v=v4">
-  <link rel="stylesheet" href="./modules.css?v=v2">
+  <link rel="stylesheet" href="./modules.css?v=v3">
   <link rel="stylesheet" href="./auth.css?v=v1">
   <link rel="stylesheet" href="./master.css?v=v1">
   <link rel="stylesheet" href="./service-import.css?v=v3">
@@ -16,10 +16,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
   <script src="./app.js?v=v3" defer></script>
-  <script src="./modules.js?v=v1" defer></script>
+  <script src="./modules.js?v=v2" defer></script>
   <script src="./auth.js?v=v1" defer></script>
   <script src="./master.js?v=v1" defer></script>
-  <script src="./service-import.js?v=v5" defer></script>
+  <script src="./service-import.js?v=v6" defer></script>
 </head>
 <body class="app-locked">
   <section id="loginScreen" class="login-screen" aria-labelledby="loginTitle" hidden>
@@ -86,8 +86,8 @@
         <label class="service-upload-zone" for="serviceImportFile">
           <span class="service-upload-icon" aria-hidden="true">↑</span>
           <strong>Unggah file Excel atau PDF</strong>
-          <span>Pilih periode bulan dan tahun terlebih dahulu sebelum mengunggah file. Seluruh data pada periode terpilih akan dimasukkan ke laporan PDF.</span>
-          <input id="serviceImportFile" type="file" accept=".xlsx,.xls,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" disabled>
+          <span>Tentukan periode bulan dan tahun terlebih dahulu, kemudian pilih file Excel atau PDF. Data yang sesuai periode akan dimasukkan ke laporan PDF.</span>
+          <input id="serviceImportFile" type="file" aria-label="Pilih file Excel atau PDF" accept=".xlsx,.xls,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" disabled>
         </label>
         <div class="service-period-filter" aria-label="Periode laporan">
           <label for="servicePeriod">Periode bulan dan tahun<input id="servicePeriod" type="month" required></label>

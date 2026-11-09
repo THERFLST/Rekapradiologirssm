@@ -42,3 +42,13 @@
 .usg-export-row{display:flex;justify-content:flex-end;margin-top:12px}
 @media(max-width:760px){.main-menu-wrap{margin-left:auto}.usg-form-grid,.usg-exam-fields{grid-template-columns:1fr}.service-form{grid-template-columns:1fr 1fr}.service-form .primary-action{grid-column:1/-1}.module-report .scroll{overflow-x:auto}}
 @media(max-width:480px){.service-form{grid-template-columns:1fr}.service-form .primary-action{grid-column:auto}.module-actions{align-items:flex-start;flex-direction:column}.usg-form-grid .fields input,.usg-exam-fields input{width:96px}}
+
+/* Navigasi internal USG selalu tampil ketika modul USG dibuka. */
+#v-usg > .usg-nav{display:flex;visibility:visible;opacity:1;width:100%;margin:0 0 16px;}
+#v-usg > .usg-nav button{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+#v-usg > .usg-nav button.on{font-weight:700;}
+
+/* Navigasi internal USG selalu tampil ketika modul USG dibuka. */
+#v-usg > .usg-nav{display:flex;visibility:visible;opacity:1;width:100%;margin:0 0 16px;}
+#v-usg > .usg-nav button{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+#v-usg > .usg-nav button.on{font-weight:700;}
