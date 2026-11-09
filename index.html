@@ -6,13 +6,15 @@
   <meta name="theme-color" content="#f3f6f8">
   <meta name="description" content="Rekap jumlah pasien dan pemeriksaan radiologi.">
   <title>Rekap Pasien Radiologi</title>
-  <link rel="stylesheet" href="./styles.css?v=v3">
-  <link rel="stylesheet" href="./modules.css?v=v1">
+  <link rel="stylesheet" href="./styles.css?v=v4">
+  <link rel="stylesheet" href="./modules.css?v=v2">
   <link rel="stylesheet" href="./auth.css?v=v1">
+  <link rel="stylesheet" href="./master.css?v=v1">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
   <script src="./app.js?v=v3" defer></script>
   <script src="./modules.js?v=v1" defer></script>
   <script src="./auth.js?v=v1" defer></script>
+  <script src="./master.js?v=v1" defer></script>
 </head>
 <body class="app-locked">
   <section id="loginScreen" class="login-screen" aria-labelledby="loginTitle" hidden>
@@ -37,6 +39,7 @@
           <button type="button" data-module="konvensional">Rekap Konvensional</button>
           <button type="button" data-module="usg">Rekap USG</button>
           <button type="button" data-module="waktu">Laporan Waktu Pelayanan</button>
+          <button type="button" data-module="master">Master Pemeriksaan</button>
         </nav>
       </div>
       <button type="button" id="logoutButton" class="logout-button">Keluar</button>
@@ -50,7 +53,7 @@
     <aside class="notice"><strong>Prototype publik:</strong> data hanya tersimpan di browser ini dan kode web dapat dilihat publik. Jangan masukkan data pasien atau informasi rahasia.</aside>
 
     <section id="v-isi" class="view panel">
-      <div class="section-title"><div><p class="eyebrow">Menu 1</p><h2>Isi Data</h2><p id="caption" class="muted"></p></div>
+      <div class="section-title"><div><p class="eyebrow">Rekap Konvensional</p><h2>Isi Data</h2><p id="caption" class="muted"></p></div>
         <div class="date-nav"><button id="prev" type="button" aria-label="Hari sebelumnya">‹</button><label>Tanggal<input id="date" type="date"></label><button id="next" type="button" aria-label="Hari berikutnya">›</button></div></div>
       <div class="form-grid"><section><h3>Asal pasien</h3><div id="origins" class="fields"></div></section><section><h3>Penjamin</h3><p class="hint">Naker hanya keterangan, tidak dihitung dalam total penjamin.</p><div id="payers" class="fields"></div></section></div>
       <section class="exam-section"><h3>Jenis pemeriksaan</h3><p class="hint">Nilai kosong dianggap 0. Ekspose harus sama dengan atau lebih besar dari pasien.</p><div id="exams"></div></section>
@@ -60,19 +63,18 @@
     </section>
 
     <section id="v-rekap" class="view">
-      <div class="panel"><div class="section-title"><div><p class="eyebrow">Menu 2</p><h2>Lihat Rekapan</h2></div></div><div id="rekapCtl" class="ctl"></div></div>
+      <div class="panel"><div class="section-title"><div><p class="eyebrow">Rekap Konvensional</p><h2>Lihat Rekapan</h2></div></div><div id="rekapCtl" class="ctl"></div></div>
       <div id="rekapOut"></div>
     </section>
 
     <section id="v-total" class="view panel">
-      <div class="section-title"><div><p class="eyebrow">Menu 3</p><h2>Total</h2><p class="muted">Ringkasan total dan rincian keseluruhan.</p></div></div>
-      <div id="totalOut" class="cards" aria-live="polite"></div>
+      <div class="section-title"><div><p class="eyebrow">Rekap Konvensional</p><h2>Total</h2><p class="muted">Ringkasan total dan rincian keseluruhan.</p></div></div>
+      <div id="totalOut" aria-live="polite"></div>
     </section>
 
     <section id="v-export" class="view panel">
-      <div class="section-title"><div><p class="eyebrow">Menu 4</p><h2>Export</h2></div></div>
-      <div id="expCtl" class="ctl"></div>
-      <p id="expInfo" class="muted"></p>
+      <div class="section-title"><div><p class="eyebrow">Rekap Konvensional</p><h2>Export</h2></div></div>
+      <div id="expCtl" class="ctl"></div><p id="expInfo" class="muted"></p>
       <div class="export-opts">
         <article><h3>Excel (.xlsx)</h3><p class="hint">Rekap per hari dan per jenis pemeriksaan.</p><button id="xls" class="secondary" type="button">Unduh Excel</button></article>
         <article><h3>PDF / Cetak</h3><p class="hint">Buka dialog cetak, lalu pilih “Simpan sebagai PDF”.</p><button id="pdf" class="secondary" type="button">Cetak / PDF</button></article>
@@ -80,7 +82,6 @@
     </section>
 
     <section id="v-usg" class="view panel module-view" hidden></section>
-
     <section id="v-waktu" class="view panel module-view" hidden>
       <div class="section-title"><div><p class="eyebrow">Modul 3</p><h2>Laporan Waktu Pelayanan</h2><p class="muted">Catat waktu mulai dan selesai pemeriksaan tanpa nama pasien.</p></div></div>
       <div class="service-form">
@@ -91,12 +92,27 @@
         <button id="saveService" class="primary-action" type="button">Catat Waktu</button>
       </div>
       <p id="serviceStatus" class="muted" aria-live="polite"></p>
-      <section class="panel module-report"><div class="section-title"><div><h3>Rata-rata waktu per bulan</h3><p class="muted">Durasi dihitung dari waktu mulai hingga selesai.</p></div></div><div id="serviceMonthly" class="scroll"></div></section>
-      <section class="panel module-report"><div class="section-title"><div><h3>Catatan terbaru</h3><p class="muted">Hanya tanggal, kelompok, dan durasi.</p></div></div><div id="serviceRecent" class="scroll"></div></section>
+      <section class="panel module-report"><div class="section-title"><div><h3>Rata-rata waktu per bulan</h3></div></div><div id="serviceMonthly" class="scroll"></div></section>
+      <section class="panel module-report"><div class="section-title"><div><h3>Catatan terbaru</h3></div></div><div id="serviceRecent" class="scroll"></div></section>
+    </section>
+
+    <section id="v-master" class="view panel module-view" hidden>
+      <div class="section-title"><div><p class="eyebrow">Pengaturan</p><h2>Master Pemeriksaan</h2><p class="muted">Tambahkan jenis pemeriksaan untuk rekap konvensional atau USG. Perubahan berlaku untuk data baru dan laporan pada browser ini.</p></div></div>
+      <form id="masterForm" class="master-form">
+        <label>Modul<select id="masterModality"><option value="konvensional">Rekap Konvensional</option><option value="usg">Rekap USG</option></select></label>
+        <label>Nama jenis pemeriksaan<input id="masterExamName" type="text" maxlength="80" placeholder="Contoh: USG Doppler" required></label>
+        <label id="masterGroupWrap">Kelompok<select id="masterExamGroup"><option value="Non Kontras">Non Kontras</option><option value="Kontras">Kontras</option></select></label>
+        <button class="primary-action" type="submit">Tambah Jenis</button>
+      </form>
+      <p id="masterStatus" class="muted" role="status" aria-live="polite"></p>
+      <div class="master-lists">
+        <section class="panel"><h3>Rekap Konvensional</h3><p class="hint">Jenis bawaan dan tambahan.</p><div id="masterConventionalList"></div></section>
+        <section class="panel"><h3>Rekap USG</h3><p class="hint">Jenis bawaan dan tambahan.</p><div id="masterUsgList"></div></section>
+      </div>
     </section>
 
     <div id="printArea"></div>
-    <footer>Versi online gratis · penyimpanan lokal perangkat · bukan untuk data pasien nyata</footer>
+    <footer>Rekap statistik radiologi · Data tersimpan pada browser/perangkat ini.</footer>
   </main>
 </body>
 </html>

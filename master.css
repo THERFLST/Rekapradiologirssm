@@ -1,0 +1,18 @@
+/* Master examination settings */
+.master-form{display:grid;grid-template-columns:1fr 2fr 1fr auto;gap:12px;align-items:end;margin:18px 0;padding:16px;border:1px solid #e2e9ec;border-radius:12px;background:#fff}
+.master-form label{display:flex;flex-direction:column;gap:6px;color:#62727a;font-size:12px;font-weight:650}
+.master-form input,.master-form select{min-height:42px;padding:9px 11px;border:1px solid #dfe7ea;border-radius:8px;background:#fff;color:#172b35;font:inherit}
+.master-lists{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.master-lists>.panel{padding:16px}
+.master-lists h3{margin:0 0 6px}
+.master-list{display:grid;gap:6px;margin:12px 0 0;padding:0;list-style:none}
+.master-list li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-bottom:1px solid #edf1f2;font-size:13px}
+.master-list li small{margin-left:6px;color:#62727a;font-size:11px}
+.master-list .muted{color:#62727a}
+.master-remove{padding:5px 9px;border:1px solid #e7caca;border-radius:6px;background:#fff;color:#a52a2a;cursor:pointer}
+.master-exam-section{margin-top:16px}
+.master-usg-fields{margin-top:10px}
+.usg-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0}
+.usg-row input{width:100px;min-height:38px;padding:7px;border:1px solid #dfe7ea;border-radius:7px;font:inherit}
+#masterConventionalReport .panel,#masterUsgReport .panel{margin-top:12px}
+@media(max-width:760px){.master-form,.master-lists{grid-template-columns:1fr}.master-form .primary-action{width:100%}}
