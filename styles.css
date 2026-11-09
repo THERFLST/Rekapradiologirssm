@@ -1,658 +1,699 @@
-:root {
-  --bg: #f5f7fb;
-  --panel: #ffffff;
-  --panel-2: #f8fafc;
-  --border: #e4e9f1;
-  --text: #1f2937;
-  --muted: #64748b;
-  --primary: #1d4ed8;
-  --primary-soft: #e8f0ff;
-  --green: #16834f;
-  --green-soft: #eafbf1;
-  --red: #b91c1c;
-  --red-soft: #fff2f2;
-  --warning: #c66a12;
-  --warning-soft: #fff6e8;
-  --shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
-}
-
-* { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; }
-button, input, select { font: inherit; }
-.hidden { display: none !important; }
-
-body {
-  min-height: 100vh;
-}
-
-.topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 18px;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px 18px 18px;
-}
-
-.eyebrow {
-  margin: 0 0 6px;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  font-weight: 700;
-}
-
-h1 {
-  margin: 0;
-  font-size: clamp(1.7rem, 2.5vw, 2.3rem);
-  letter-spacing: -0.04em;
-}
-
-.controls {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.controls label {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  font-size: 12px;
-  color: var(--muted);
-  font-weight: 600;
-}
-
-select, input {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  color: var(--text);
-  height: 42px;
-  padding: 0 12px;
-}
-
-.action-group {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-button {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  color: var(--text);
-  padding: 10px 14px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.primary {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
-
-.secondary {
-  background: #edf3ff;
-  color: var(--primary);
-  border-color: #d5e3ff;
-}
-
-.secondary.danger {
-  background: #fff1f2;
-  color: var(--red);
-  border-color: #fecdd3;
-}
-
-.secondary.success {
-  background: #ebfff2;
-  color: var(--green);
-  border-color: #bbf7d0;
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.icon-button {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  font-size: 26px;
-  padding: 0;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.app-shell {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 18px 42px;
-}
-
-.user-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 8px 0 18px;
-}
-
-.user-chip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 12px;
-  box-shadow: var(--shadow);
-}
-
-.chip-label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-}
-
-.summary-cards {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(180px, 1fr));
-  gap: 14px;
-  margin-bottom: 18px;
-}
-
-.card, .panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
-}
-
-.card {
-  padding: 18px 18px 16px;
-}
-
-.card span {
-  display: block;
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 8px;
-}
-
-.card strong {
-  font-size: clamp(1.7rem, 3vw, 2.5rem);
-  letter-spacing: -0.05em;
-}
-
-.panel {
-  padding: 18px;
-  margin-top: 18px;
-}
-
-.section-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.section-head h2 {
-  margin: 0;
-  font-size: 1.1rem;
-}
-
-.issues-box {
-  background: var(--panel-2);
-  border: 1px dashed var(--border);
-  border-radius: 12px;
-  padding: 14px 16px;
-}
-
-.muted {
-  margin: 0;
-  color: var(--muted);
-}
-
-.issue-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.issue-row:last-child {
-  border-bottom: 0;
-}
-
-.issue-badge {
-  width: 26px;
-  height: 26px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.issue-badge.err {
-  background: var(--red-soft);
-  color: var(--red);
-}
-
-.date-nav {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  margin-top: 8px;
-}
-
-.date-picker {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--muted);
-  font-weight: 600;
-  flex: 1;
-  max-width: 240px;
-}
-
-.date-caption {
-  margin: 10px 0 4px;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.form-section {
-  border-top: 1px solid var(--border);
-  margin-top: 18px;
-  padding-top: 18px;
-}
-
-.form-section h3 {
-  margin: 0;
-  font-size: 15px;
-}
-
-.hint {
-  margin: 6px 0 12px;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.number-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.number-field input,
-.exam-number input {
-  width: 100%;
-  height: 40px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: #fff;
-}
-
-.exam-group {
-  margin-top: 12px;
-}
-
-.exam-group h4 {
-  margin: 0 0 10px;
-  font-size: 12px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.exam-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.exam-row {
-  display: grid;
-  grid-template-columns: minmax(110px, 1.4fr) repeat(2, minmax(78px, 0.8fr));
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--panel-2);
-}
-
-.exam-name {
-  display: flex;
-  align-items: center;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--text);
-}
-
-.exam-number {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--muted);
-}
-
-.exam-number input {
-  padding: 0 8px;
-  text-align: right;
-}
-
-.daily-totals {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.daily-totals > div {
-  border: 1px solid var(--border);
-  background: var(--panel-2);
-  border-radius: 10px;
-  padding: 10px 12px;
-}
-
-.daily-totals span {
-  display: block;
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.daily-totals strong {
-  display: block;
-  margin-top: 6px;
-  font-size: 18px;
-  letter-spacing: -0.03em;
-}
-
-.status-text.ok-text { color: var(--green); }
-.status-text.error-text { color: var(--red); }
-
-.form-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.button {
-  background: #fff;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.summary-card {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--panel-2);
-  padding: 14px;
-}
-
-.summary-card h3 {
-  margin: 0 0 12px;
-  font-size: 15px;
-}
-
-.summary-lines {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.summary-line {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 10px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  font-size: 13px;
-}
-
-.summary-line strong {
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.summary-line small {
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.total-line {
-  background: #edf6f1;
-  border-color: #d8ebdf;
-}
-
-.exam-summary {
-  margin-top: 14px;
-}
-
-.table-scroll {
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 420px;
-  font-size: 12px;
-}
-
-th, td {
-  padding: 9px 10px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-}
-
-th {
-  background: #f8fafc;
-  color: var(--muted);
-  font-weight: 700;
-}
-
-td:nth-child(2), td:nth-child(3), th:nth-child(2), th:nth-child(3) {
-  text-align: right;
-}
-
-.subtotal {
-  font-weight: 700;
-  background: #f5f9ff;
-}
-
-.grand-total {
-  font-weight: 800;
-  background: #ebfff2;
-}
-
-.history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.history-item {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px;
-  background: var(--panel-2);
-}
-
-.history-item small {
-  display: block;
-  color: var(--muted);
-  margin-bottom: 5px;
-}
-
-.history-empty {
-  border: 1px dashed var(--border);
-  border-radius: 10px;
-  padding: 12px;
-  background: var(--panel-2);
-  color: var(--muted);
-}
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(15, 23, 42, 0.4);
-  z-index: 50;
-}
-
-.modal-card {
-  width: min(92vw, 420px);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 24px;
-  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.25);
-}
-
-.modal-card h2 {
-  margin: 0 0 18px;
-}
-
-.field-block {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.field-block input {
-  width: 100%;
-}
-
-.full {
-  width: 100%;
-}
-
-.demo-box {
-  margin-top: 16px;
-  padding: 12px;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.toast {
-  position: fixed;
-  right: 18px;
-  bottom: 18px;
-  background: rgba(17, 24, 39, 0.94);
-  color: white;
-  border-radius: 10px;
-  padding: 10px 14px;
-  box-shadow: 0 18px 28px rgba(0,0,0,0.18);
-  z-index: 100;
-  font-size: 13px;
-}
-
-@media (max-width: 760px) {
-  .topbar {
-    flex-direction: column;
-    align-items: stretch;
+const STORAGE_KEY = 'rekap-radiologi-v1';
+const LOCK_KEY = 'rekap-radiologi-locks-v1';
+const HISTORY_KEY = 'rekap-radiologi-history-v1';
+const CURRENT_USER_KEY = 'rekap-radiologi-current-user';
+
+const USERS = {
+  admin: { username: 'admin', password: 'admin123', role: 'admin', name: 'Admin RS' },
+  petugas: { username: 'petugas', password: 'petugas123', role: 'petugas', name: 'Petugas Radiologi' }
+};
+
+const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const DAYS = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+const ORIGINS = [{key:'umum',label:'Umum'},{key:'spesialis',label:'Poli Spesialis'},{key:'ruangan',label:'Ruangan'},{key:'luarRs',label:'Luar RS'}];
+const PAYERS = [{key:'bpjs',label:'BPJS'},{key:'umum',label:'Umum'},{key:'asuransi',label:'Asuransi'},{key:'naker',label:'Naker (keterangan)'}];
+const EXAMS = [
+  {key:'thoraxPa',label:'Thorax PA',group:'Non Kontras'},{key:'thoraxPaLat',label:'Thorax PA & Lat',group:'Non Kontras'},
+  {key:'extremitas',label:'Extremitas',group:'Non Kontras'},{key:'extremitasBilateral',label:'Extremitas Bilateral',group:'Non Kontras'},
+  {key:'columnaVertebralis',label:'Columna Vertebralis',group:'Non Kontras'},{key:'columnaVert4Posisi',label:'Columna Vert 4 Posisi',group:'Non Kontras'},
+  {key:'cranium',label:'Cranium',group:'Non Kontras'},{key:'sinus',label:'Sinus',group:'Non Kontras'},
+  {key:'bnoAbdomen',label:'BNO/Abdomen',group:'Non Kontras'},{key:'abdomen3Posisi',label:'Abdomen 3 Posisi',group:'Non Kontras'},
+  {key:'pelvis',label:'Pelvis',group:'Non Kontras'},{key:'pelvis2Posisi',label:'Pelvis 2 Posisi',group:'Non Kontras'},
+  {key:'omdOesophagografi',label:'OMD/Oesophagografi',group:'Kontras'},{key:'md',label:'MD',group:'Kontras'},
+  {key:'arthrografi',label:'Arthrografi',group:'Kontras'},{key:'cholecystografi',label:'Cholecystografi',group:'Kontras'},
+  {key:'urethrocystografi',label:'Urethrocystografi',group:'Kontras'},{key:'hsg',label:'HSG',group:'Kontras'},
+  {key:'colonInloop',label:'Colon Inloop (B. Enema)',group:'Kontras'},{key:'bnoIvp',label:'BNO-IVP',group:'Kontras'},
+  {key:'rpg',label:'RPG',group:'Kontras'},{key:'corAnalisa',label:'COR Analisa',group:'Kontras'},
+  {key:'appendicogram',label:'Appendicogram',group:'Kontras'}
+];
+
+const state = {
+  year: new Date().getFullYear(),
+  month: new Date().getMonth(),
+  date: formatDate(new Date()),
+  data: loadData(),
+  locks: loadLocks(),
+  history: loadHistory(),
+  currentUser: loadCurrentUser()
+};
+
+function loadData() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; } }
+function loadLocks() { try { return JSON.parse(localStorage.getItem(LOCK_KEY) || '{}'); } catch { return {}; } }
+function loadHistory() { try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; } }
+function loadCurrentUser() { try { return JSON.parse(localStorage.getItem(CURRENT_USER_KEY) || 'null'); } catch { return null; } }
+
+function persistData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data)); }
+function persistLocks() { localStorage.setItem(LOCK_KEY, JSON.stringify(state.locks)); }
+function persistHistory() { localStorage.setItem(HISTORY_KEY, JSON.stringify(state.history.slice(0, 25))); }
+function persistCurrentUser() { if (state.currentUser) localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(state.currentUser)); else localStorage.removeItem(CURRENT_USER_KEY); }
+
+function monthKey() { return `${state.year}-${String(state.month + 1).padStart(2, '0')}`; }
+function formatDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+function formatDisplayDate(dateStr) {
+  const d = new Date(`${dateStr}T12:00:00`);
+  return `${DAYS[d.getDay()]} · ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+function daysInMonth() { return new Date(state.year, state.month + 1, 0).getDate(); }
+function emptyDay() { const r = { source: {}, payer: {}, exams: {} }; for (const exam of EXAMS) r.exams[exam.key] = { pasien: '', ekspose: '' }; return r; }
+function getDayRecord(dateStr = state.date) { if (!state.data[dateStr]) state.data[dateStr] = emptyDay(); return state.data[dateStr]; }
+function num(v) { if (v === '' || v === null || v === undefined) return 0; const n = Number(v); return Number.isFinite(n) ? n : 0; }
+function fmt(v) { return Number(v || 0).toLocaleString('id-ID'); }
+function percent(value, total) { if (!total) return '0,0%'; return `${((value / total) * 100).toFixed(1).toString().replace('.', ',')}%`; }
+function escapeHtml(str) { return String(str).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
+
+function isCurrentMonthLocked() { return !!(state.locks[monthKey()] && state.locks[monthKey()].locked); }
+function canEditCurrentMonth() {
+  if (!state.currentUser) return false;
+  if (state.currentUser.role === 'admin') return true;
+  return !isCurrentMonthLocked();
+}
+function isAdmin() { return state.currentUser && state.currentUser.role === 'admin'; }
+
+function addHistory(action, detail) {
+  if (!state.currentUser) return;
+  state.history.unshift({
+    by: state.currentUser.username,
+    role: state.currentUser.role,
+    action,
+    detail,
+    timestamp: new Date().toISOString()
+  });
+  state.history = state.history.slice(0, 20);
+  persistHistory();
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = state.history;
+  if (!list.length) {
+    document.getElementById('historyList').innerHTML = '<div class="history-empty">Belum ada riwayat perubahan.</div>';
+    return;
   }
 
-  .controls {
-    width: 100%;
-  }
-
-  .controls label {
-    flex: 1;
-  }
-
-  .summary-cards {
-    grid-template-columns: 1fr;
-  }
-
-  .summary-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .field-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .exam-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .daily-totals {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .form-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
+  document.getElementById('historyList').innerHTML = list.map(item => {
+    const date = new Date(item.timestamp).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+    return `
+      <div class="history-item">
+        <small>${date} • ${item.by} (${item.role})</small>
+        <strong>${item.action}</strong>
+        <div>${item.detail}</div>
+      </div>
+    `;
+  }).join('');
 }
 
-@media (max-width: 430px) {
-  .action-group {
-    width: 100%;
-    justify-content: stretch;
+function renderLoginState() {
+  const loggedIn = !!state.currentUser;
+  document.getElementById('loginOverlay').classList.toggle('hidden', loggedIn);
+  document.getElementById('mainApp').classList.toggle('hidden', !loggedIn);
+
+  if (loggedIn) {
+    document.getElementById('currentUserName').textContent = state.currentUser.name;
+    document.getElementById('currentUserRole').textContent = state.currentUser.role;
+    document.getElementById('monthLockStatus').textContent = isCurrentMonthLocked() ? 'Terkunci' : 'Terbuka';
+  } else {
+    document.getElementById('currentUserName').textContent = '-';
+    document.getElementById('currentUserRole').textContent = '-';
+    document.getElementById('monthLockStatus').textContent = 'Belum login';
   }
 
-  .action-group > * {
-    flex: 1 1 140px;
-  }
-
-  .field-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .exam-row {
-    grid-template-columns: 1fr 1fr;
-  }
+  updateLockButtons();
 }
+
+function updateLockButtons() {
+  const canEdit = canEditCurrentMonth();
+  const saveBtn = document.getElementById('saveBtn');
+  saveBtn.disabled = !canEdit;
+  saveBtn.style.opacity = canEdit ? '1' : '0.5';
+
+  document.getElementById('lockBtn').style.display = isAdmin() ? 'inline-flex' : 'none';
+  document.getElementById('unlockBtn').style.display = isAdmin() ? 'inline-flex' : 'none';
+
+  const lockState = state.locks[monthKey()] && state.locks[monthKey()].locked ? 'Terkunci' : 'Terbuka';
+  document.getElementById('monthLockStatus').textContent = lockState;
+}
+
+function signIn(username, password) {
+  const user = Object.values(USERS).find(u => u.username === username && u.password === password);
+  if (!user) return false;
+  state.currentUser = user;
+  persistCurrentUser();
+  renderLoginState();
+  renderAll();
+  addHistory('Login', `User ${user.name} masuk ke sistem.`);
+  return true;
+}
+
+function logout() {
+  state.currentUser = null;
+  persistCurrentUser();
+  renderLoginState();
+}
+
+function bindEvents() {
+  document.getElementById('loginForm').addEventListener('submit', event => {
+    event.preventDefault();
+    const username = document.getElementById('usernameInput').value.trim();
+    const password = document.getElementById('passwordInput').value.trim();
+    if (!signIn(username, password)) {
+      showToast('Username atau password salah.');
+    }
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', logout);
+
+  document.getElementById('monthSelect').addEventListener('change', () => {
+    state.month = Number(document.getElementById('monthSelect').value);
+    state.date = `${state.year}-${String(state.month + 1).padStart(2, '0')}-01`;
+    renderAll();
+  });
+
+  document.getElementById('yearSelect').addEventListener('change', () => {
+    state.year = Number(document.getElementById('yearSelect').value);
+    state.date = `${state.year}-${String(state.month + 1).padStart(2, '0')}-01`;
+    renderAll();
+  });
+
+  document.getElementById('dateSelect').addEventListener('change', () => {
+    if (!document.getElementById('dateSelect').value) return;
+    state.date = document.getElementById('dateSelect').value;
+    const d = new Date(`${state.date}T12:00:00`);
+    state.year = d.getFullYear();
+    state.month = d.getMonth();
+    renderAll();
+  });
+
+  document.getElementById('prevDay').addEventListener('click', () => {
+    const d = new Date(`${state.date}T12:00:00`);
+    d.setDate(d.getDate() - 1);
+    state.date = formatDate(d);
+    state.year = d.getFullYear();
+    state.month = d.getMonth();
+    renderAll();
+  });
+
+  document.getElementById('nextDay').addEventListener('click', () => {
+    const d = new Date(`${state.date}T12:00:00`);
+    d.setDate(d.getDate() + 1);
+    state.date = formatDate(d);
+    state.year = d.getFullYear();
+    state.month = d.getMonth();
+    renderAll();
+  });
+
+  document.getElementById('clearDay').addEventListener('click', () => {
+    if (!canEditCurrentMonth()) {
+      showToast('Bulan ini terkunci. Hanya admin yang bisa membukanya.');
+      return;
+    }
+    if (!confirm('Kosongkan semua angka untuk tanggal ini?')) return;
+    delete state.data[state.date];
+    persistData();
+    addHistory('Hapus input tanggal', `Tanggal ${state.date} dibersihkan.`);
+    renderAll();
+  });
+
+  document.getElementById('clearMonth').addEventListener('click', () => {
+    if (!canEditCurrentMonth()) {
+      showToast('Bulan ini terkunci. Tidak bisa menghapus data.');
+      return;
+    }
+    if (!confirm(`Hapus semua data bulan ${MONTHS[state.month]} ${state.year}?`)) return;
+    const prefix = `${state.year}-${String(state.month + 1).padStart(2, '0')}-`;
+    Object.keys(state.data).forEach(key => {
+      if (key.startsWith(prefix)) delete state.data[key];
+    });
+    persistData();
+    addHistory('Reset bulan', `Semua data bulan ${MONTHS[state.month]} ${state.year} dihapus.`);
+    renderAll();
+    showToast('Data bulan ini berhasil direset.');
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    if (!canEditCurrentMonth()) {
+      showToast('Bulan ini terkunci. Tidak bisa mengubah data.');
+      return;
+    }
+    persistData();
+    addHistory('Simpan bulan', `Menyimpan data untuk ${MONTHS[state.month]} ${state.year}.`);
+    showToast('Data berhasil disimpan.');
+  });
+
+  document.getElementById('lockBtn').addEventListener('click', () => {
+    if (!isAdmin()) {
+      showToast('Hanya admin yang bisa mengunci bulan.');
+      return;
+    }
+    state.locks[monthKey()] = { locked: true, by: state.currentUser.username, at: new Date().toISOString() };
+    persistLocks();
+    addHistory('Kunci bulan', `Bulan ${MONTHS[state.month]} ${state.year} dikunci.`);
+    renderAll();
+    showToast('Bulan berhasil dikunci.');
+  });
+
+  document.getElementById('unlockBtn').addEventListener('click', () => {
+    if (!isAdmin()) {
+      showToast('Hanya admin yang bisa membuka kunci bulan.');
+      return;
+    }
+    delete state.locks[monthKey()];
+    persistLocks();
+    addHistory('Buka kunci bulan', `Bulan ${MONTHS[state.month]} ${state.year} dibuka.`);
+    renderAll();
+    showToast('Kunci bulan dibuka.');
+  });
+
+  document.getElementById('excelBtn').addEventListener('click', exportExcelMonthlyReport);
+  document.getElementById('pdfBtn').addEventListener('click', exportPdfMonthlyReport);
+
+  document.getElementById('backupBtn').addEventListener('click', exportBackupFile);
+  document.getElementById('restoreBtn').addEventListener('click', () => {
+    document.getElementById('restoreInput').click();
+  });
+
+  document.getElementById('restoreInput').addEventListener('change', importBackupFile);
+}
+
+function renderPeriodControls() {
+  const monthSelect = document.getElementById('monthSelect');
+  monthSelect.innerHTML = MONTHS.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+  monthSelect.value = String(state.month);
+
+  const yearSelect = document.getElementById('yearSelect');
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
+  yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  yearSelect.value = String(state.year);
+}
+
+function renderFormFields() {
+  const record = getDayRecord();
+  document.getElementById('originFields').innerHTML = ORIGINS.map(item => {
+    return `
+      <label class="number-field">
+        <span>${item.label}</span>
+        <input type="number" min="0" step="1" inputmode="numeric" data-group="source" data-key="${item.key}" value="${record.source[item.key] ?? ''}" ${!canEditCurrentMonth() ? 'disabled' : ''} />
+      </label>
+    `;
+  }).join('');
+
+  document.getElementById('payerFields').innerHTML = PAYERS.map(item => {
+    return `
+      <label class="number-field">
+        <span>${item.label}</span>
+        <input type="number" min="0" step="1" inputmode="numeric" data-group="payer" data-key="${item.key}" value="${record.payer[item.key] ?? ''}" ${!canEditCurrentMonth() ? 'disabled' : ''} />
+      </label>
+    `;
+  }).join('');
+
+  const groups = ['Non Kontras', 'Kontras'];
+  document.getElementById('examFields').innerHTML = groups.map(group => {
+    const list = EXAMS.filter(exam => exam.group === group).map(exam => {
+      return `
+        <div class="exam-row">
+          <div class="exam-name">${exam.label}</div>
+          <label class="exam-number">
+            <span>Pasien</span>
+            <input type="number" min="0" step="1" inputmode="numeric" data-exam="${exam.key}" data-kind="pasien" value="${record.exams[exam.key]?.pasien ?? ''}" ${!canEditCurrentMonth() ? 'disabled' : ''} />
+          </label>
+          <label class="exam-number">
+            <span>Ekspose</span>
+            <input type="number" min="0" step="1" inputmode="numeric" data-exam="${exam.key}" data-kind="ekspose" value="${record.exams[exam.key]?.ekspose ?? ''}" ${!canEditCurrentMonth() ? 'disabled' : ''} />
+          </label>
+        </div>
+      `;
+    }).join('');
+
+    return `<div class="exam-group"><h4>${group}</h4><div class="exam-grid">${list}</div></div>`;
+  }).join('');
+
+  bindInputs();
+}
+
+function bindInputs() {
+  document.querySelectorAll('input[data-group]').forEach(input => {
+    input.addEventListener('input', event => {
+      if (!canEditCurrentMonth()) {
+        showToast('Bulan ini terkunci. Tidak bisa mengubah data.');
+        return;
+      }
+      const group = event.target.dataset.group;
+      const key = event.target.dataset.key;
+      const value = event.target.value === '' ? '' : Number(event.target.value);
+      const record = getDayRecord();
+      record[group][key] = value;
+      persistData();
+      addHistory('Edit harian', `Tanggal ${state.date} • ${group} • ${key}`);
+      renderAll();
+    });
+  });
+
+  document.querySelectorAll('input[data-exam]').forEach(input => {
+    input.addEventListener('input', event => {
+      if (!canEditCurrentMonth()) {
+        showToast('Bulan ini terkunci. Tidak bisa mengubah data.');
+        return;
+      }
+      const exam = event.target.dataset.exam;
+      const kind = event.target.dataset.kind;
+      const value = event.target.value === '' ? '' : Number(event.target.value);
+      const record = getDayRecord();
+      record.exams[exam] = record.exams[exam] || {};
+      record.exams[exam][kind] = value;
+      persistData();
+      addHistory('Edit pemeriksaan', `Tanggal ${state.date} • ${exam} • ${kind}`);
+      renderAll();
+    });
+  });
+}
+
+function getDailyStatus(record) {
+  const errors = [];
+  const originTotal = ORIGINS.reduce((sum, item) => sum + num(record.source[item.key]), 0);
+  const payerTotal = PAYERS.filter(item => item.key !== 'naker').reduce((sum, item) => sum + num(record.payer[item.key]), 0);
+
+  if (originTotal !== payerTotal) {
+    errors.push(`Total asal pasien (${originTotal}) tidak sama dengan total penjamin (${payerTotal}).`);
+  }
+
+  EXAMS.forEach(exam => {
+    const pasien = num(record.exams[exam.key]?.pasien);
+    const ekspose = num(record.exams[exam.key]?.ekspose);
+    if (ekspose < pasien) {
+      errors.push(`Ekspose ${exam.label} (${ekspose}) lebih kecil dari pasien (${pasien}).`);
+    }
+  });
+
+  return { ok: errors.length === 0, messages: errors };
+}
+
+function renderDailyIssues() {
+  const issues = [];
+  for (let d = 1; d <= daysInMonth(); d++) {
+    const key = `${state.year}-${String(state.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const record = state.data[key] || emptyDay();
+    const status = getDailyStatus(record);
+    if (!status.ok) {
+      issues.push({ date: d, messages: status.messages });
+    }
+  }
+
+  const box = document.getElementById('dailyIssues');
+  if (!issues.length) {
+    box.innerHTML = '<p class="muted">Belum ada masalah.</p>';
+    return;
+  }
+
+  box.innerHTML = issues.map(issue => `
+    <div class="issue-row">
+      <span class="issue-badge err">!</span>
+      <div>
+        <strong>Tanggal ${issue.date}</strong>
+        <div>${issue.messages.map(msg => `<div>• ${msg}</div>`).join('')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderDailyTotals() {
+  const record = getDayRecord();
+  const totalVisit = ORIGINS.reduce((sum, item) => sum + num(record.source[item.key]), 0);
+  const totalExam = EXAMS.reduce((sum, item) => sum + num(record.exams[item.key]?.pasien), 0);
+  const totalExpose = EXAMS.reduce((sum, item) => sum + num(record.exams[item.key]?.ekspose), 0);
+  const status = getDailyStatus(record);
+
+  document.getElementById('dayVisits').textContent = fmt(totalVisit);
+  document.getElementById('dayExams').textContent = fmt(totalExam);
+  document.getElementById('dayExpose').textContent = fmt(totalExpose);
+  const statusEl = document.getElementById('dayStatus');
+  statusEl.textContent = status.ok ? 'OK' : 'Error';
+  statusEl.classList.toggle('ok-text', status.ok);
+  statusEl.classList.toggle('error-text', !status.ok);
+}
+
+function renderMonthlySummary() {
+  const originTotals = { umum:0, spesialis:0, ruangan:0, luarRs:0 };
+  const payerTotals = { bpjs:0, umum:0, asuransi:0, naker:0 };
+  const examTotals = {};
+  EXAMS.forEach(exam => { examTotals[exam.key] = { pasien:0, ekspose:0 }; });
+
+  let visits = 0;
+  let exams = 0;
+  let expose = 0;
+
+  for (let d = 1; d <= daysInMonth(); d++) {
+    const key = `${state.year}-${String(state.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const record = state.data[key] || emptyDay();
+    const dayVisit = ORIGINS.reduce((sum, item) => sum + num(record.source[item.key]), 0);
+    const dayExam = EXAMS.reduce((sum, item) => sum + num(record.exams[item.key]?.pasien), 0);
+    const dayExpose = EXAMS.reduce((sum, item) => sum + num(record.exams[item.key]?.ekspose), 0);
+
+    visits += dayVisit;
+    exams += dayExam;
+    expose += dayExpose;
+
+    ORIGINS.forEach(item => { originTotals[item.key] += num(record.source[item.key]); });
+    PAYERS.forEach(item => { payerTotals[item.key] += num(record.payer[item.key]); });
+    EXAMS.forEach(exam => {
+      examTotals[exam.key].pasien += num(record.exams[exam.key]?.pasien);
+      examTotals[exam.key].ekspose += num(record.exams[exam.key]?.ekspose);
+    });
+  }
+
+  document.getElementById('summaryVisits').textContent = fmt(visits);
+  document.getElementById('summaryExams').textContent = fmt(exams);
+  document.getElementById('summaryExpose').textContent = fmt(expose);
+
+  document.getElementById('originSummary').innerHTML = ORIGINS.map(item => {
+    const v = originTotals[item.key];
+    return `<div class="summary-line"><span>${item.label}</span><strong>${fmt(v)} <small>${percent(v, visits)}</small></strong></div>`;
+  }).join('') + `<div class="summary-line total-line"><span>Total</span><strong>${fmt(visits)}</strong></div>`;
+
+  const payerTotal = PAYERS.filter(item => item.key !== 'naker').reduce((sum, item) => sum + payerTotals[item.key], 0);
+  document.getElementById('payerSummary').innerHTML = PAYERS.map(item => {
+    const v = payerTotals[item.key];
+    const pct = item.key === 'naker' ? 'Keterangan' : percent(v, payerTotal);
+    return `<div class="summary-line"><span>${item.label}</span><strong>${fmt(v)} <small>${pct}</small></strong></div>`;
+  }).join('') + `<div class="summary-line total-line"><span>Total penjamin</span><strong>${fmt(payerTotal)}</strong></div>`;
+
+  let nonPasien = 0;
+  let nonExpose = 0;
+  let konPasien = 0;
+  let konExpose = 0;
+
+  const rows = EXAMS.map(exam => {
+    const p = examTotals[exam.key].pasien;
+    const e = examTotals[exam.key].ekspose;
+    if (exam.group === 'Non Kontras') {
+      nonPasien += p;
+      nonExpose += e;
+    } else {
+      konPasien += p;
+      konExpose += e;
+    }
+    return `<tr><td>${exam.label}</td><td>${fmt(p)}</td><td>${fmt(e)}</td></tr>`;
+  }).join('');
+
+  document.getElementById('examSummary').innerHTML = rows + `
+    <tr class="subtotal"><td>Subtotal Non Kontras</td><td>${fmt(nonPasien)}</td><td>${fmt(nonExpose)}</td></tr>
+    <tr class="subtotal"><td>Subtotal Kontras</td><td>${fmt(konPasien)}</td><td>${fmt(konExpose)}</td></tr>
+    <tr class="grand-total"><td>Grand Total</td><td>${fmt(nonPasien + konPasien)}</td><td>${fmt(nonExpose + konExpose)}</td></tr>
+  `;
+}
+
+function renderDateHeader() {
+  const caption = formatDisplayDate(state.date);
+  document.getElementById('dateCaption').textContent = caption;
+  document.getElementById('dateSelect').value = state.date;
+}
+
+function renderAll() {
+  renderDateHeader();
+  renderPeriodControls();
+  renderFormFields();
+  renderDailyTotals();
+  renderDailyIssues();
+  renderMonthlySummary();
+  renderHistory();
+  renderLoginState();
+  updateLockButtons();
+}
+
+function setDefaultDate() {
+  const d = new Date(state.year, state.month, 1);
+  state.date = formatDate(d);
+}
+
+function exportExcelMonthlyReport() {
+  const originTotals = { umum:0, spesialis:0, ruangan:0, luarRs:0 };
+  const payerTotals = { bpjs:0, umum:0, asuransi:0, naker:0 };
+  const examTotals = {};
+  EXAMS.forEach(exam => { examTotals[exam.key] = { pasien:0, ekspose:0 }; });
+
+  for (let d = 1; d <= daysInMonth(); d++) {
+    const key = `${state.year}-${String(state.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const record = state.data[key] || emptyDay();
+    ORIGINS.forEach(item => { originTotals[item.key] += num(record.source[item.key]); });
+    PAYERS.forEach(item => { payerTotals[item.key] += num(record.payer[item.key]); });
+    EXAMS.forEach(exam => {
+      examTotals[exam.key].pasien += num(record.exams[exam.key]?.pasien);
+      examTotals[exam.key].ekspose += num(record.exams[exam.key]?.ekspose);
+    });
+  }
+
+  const rows = [];
+  rows.push(['Rekap Pasien Radiologi']);
+  rows.push(['Periode', `${MONTHS[state.month]} ${state.year}`]);
+  rows.push([]);
+  rows.push(['Asal Pasien', 'Jumlah', 'Persentase']);
+  const visitTotal = Object.values(originTotals).reduce((sum, v) => sum + v, 0);
+  ORIGINS.forEach(item => rows.push([item.label, originTotals[item.key], percent(originTotals[item.key], visitTotal)]));
+  rows.push([]);
+  rows.push(['Penjamin', 'Jumlah', 'Persentase']);
+  const payerTotal = PAYERS.filter(i => i.key !== 'naker').reduce((sum, item) => sum + payerTotals[item.key], 0);
+  PAYERS.forEach(item => rows.push([item.label, payerTotals[item.key], item.key === 'naker' ? 'Keterangan' : percent(payerTotals[item.key], payerTotal)]));
+  rows.push([]);
+  rows.push(['Jenis Pemeriksaan', 'Pasien', 'Ekspose']);
+  let totalPatient = 0;
+  let totalExpose = 0;
+  EXAMS.forEach(exam => {
+    const p = examTotals[exam.key].pasien;
+    const e = examTotals[exam.key].ekspose;
+    totalPatient += p;
+    totalExpose += e;
+    rows.push([exam.label, p, e]);
+  });
+  rows.push(['Grand Total', totalPatient, totalExpose]);
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'Rekap Bulanan');
+  XLSX.writeFile(wb, `rekap-radiologi-${state.year}-${String(state.month + 1).padStart(2, '0')}.xlsx`);
+  showToast('File Excel berhasil diunduh.');
+}
+
+function exportPdfMonthlyReport() {
+  const data = [];
+  for (let d = 1; d <= daysInMonth(); d++) {
+    const key = `${state.year}-${String(state.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const record = state.data[key] || emptyDay();
+    const visit = ORIGINS.reduce((sum, item) => sum + num(record.source[item.key]), 0);
+    const exam = EXAMS.reduce((sum, item) => sum + num(record.exams[item.key]?.pasien), 0);
+    const expose = EXAMS.reduce((sum, item) => sum + num(record.exams[item.key]?.ekspose), 0);
+    data.push({ date: d, visit, exam, expose });
+  }
+
+  const report = document.createElement('div');
+  report.id = 'pdfReport';
+  report.style.fontFamily = 'Inter, sans-serif';
+  report.style.padding = '24px';
+  report.style.background = '#fff';
+  report.style.color = '#111827';
+  report.innerHTML = `
+    <h2 style="margin:0 0 12px;">Rekap Pasien Radiologi</h2>
+    <p style="margin:0 0 18px;"><strong>Periode:</strong> ${MONTHS[state.month]} ${state.year}</p>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:12px;margin-bottom:20px;">
+      <div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;"><div style="color:#6b7280;font-size:12px;">Kunjungan</div><div style="font-weight:700;font-size:22px;margin-top:4px;">${document.getElementById('summaryVisits').textContent}</div></div>
+      <div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;"><div style="color:#6b7280;font-size:12px;">Pemeriksaan</div><div style="font-weight:700;font-size:22px;margin-top:4px;">${document.getElementById('summaryExams').textContent}</div></div>
+      <div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;"><div style="color:#6b7280;font-size:12px;">Ekspose</div><div style="font-weight:700;font-size:22px;margin-top:4px;">${document.getElementById('summaryExpose').textContent}</div></div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;font-size:12px;">
+      <thead>
+        <tr>
+          <th style="padding:8px;border:1px solid #e5e7eb;background:#f8fafc;text-align:left;">Tanggal</th>
+          <th style="padding:8px;border:1px solid #e5e7eb;background:#f8fafc;text-align:right;">Kunjungan</th>
+          <th style="padding:8px;border:1px solid #e5e7eb;background:#f8fafc;text-align:right;">Pemeriksaan</th>
+          <th style="padding:8px;border:1px solid #e5e7eb;background:#f8fafc;text-align:right;">Ekspose</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data.map(item => `
+          <tr>
+            <td style="padding:8px;border:1px solid #e5e7eb;">${item.date}</td>
+            <td style="padding:8px;border:1px solid #e5e7eb;text-align:right;">${fmt(item.visit)}</td>
+            <td style="padding:8px;border:1px solid #e5e7eb;text-align:right;">${fmt(item.exam)}</td>
+            <td style="padding:8px;border:1px solid #e5e7eb;text-align:right;">${fmt(item.expose)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+
+  document.body.appendChild(report);
+  html2pdf().set({
+    margin: 8,
+    filename: `rekap-radiologi-${state.year}-${String(state.month + 1).padStart(2, '0')}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }).from(report).save().finally(() => { report.remove(); });
+  showToast('File PDF sedang diunduh.');
+}
+
+function exportBackupFile() {
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    data: state.data,
+    locks: state.locks,
+    history: state.history
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `rekap-radiologi-backup-${state.year}-${String(state.month + 1).padStart(2, '0')}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Backup JSON berhasil dibuat.');
+}
+
+function importBackupFile(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(String(reader.result));
+      if (parsed && parsed.data) {
+        state.data = parsed.data;
+        state.locks = parsed.locks || {};
+        state.history = parsed.history || [];
+        persistData();
+        persistLocks();
+        persistHistory();
+        renderAll();
+        showToast('Data berhasil dipulihkan dari backup.');
+      } else {
+        showToast('Format file backup tidak valid.');
+      }
+    } catch (error) {
+      showToast('Gagal membaca file backup.');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function showToast(message) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 1800);
+}
+
+function init() {
+  renderPeriodControls();
+  bindEvents();
+  setDefaultDate();
+  renderAll();
+}
+
+init();

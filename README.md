@@ -1,20 +1,655 @@
-# Rekap Pasien Radiologi
+:root {
+  --bg: #f5f7fb;
+  --panel: #ffffff;
+  --panel-2: #f8fafc;
+  --border: #e4e9f1;
+  --text: #1f2937;
+  --muted: #64748b;
+  --primary: #1d4ed8;
+  --primary-soft: #e8f0ff;
+  --green: #16834f;
+  --green-soft: #eafbf1;
+  --red: #b91c1c;
+  --red-soft: #fff2f2;
+  --warning: #c66a12;
+  --warning-soft: #fff6e8;
+  --shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+}
 
-MVP front-end untuk rekap agregat Instalasi Radiologi RS Setia Mitra.
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; }
+button, input, select { font: inherit; }
+.hidden { display: none !important; }
 
-## Jalankan
+body { min-height: 100vh; }
 
-Buka `index.html` di browser, atau aktifkan GitHub Pages dari Settings → Pages, pilih branch `main` dan folder `/ (root)`. Setelah beberapa menit, GitHub menampilkan URL Pages pada halaman tersebut.
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 18px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 18px 18px;
+}
 
-## Fitur saat ini
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+}
 
-- Pemilih bulan/tahun dan navigasi tanggal.
-- Form input harian yang responsif untuk HP maupun komputer.
-- Perhitungan kunjungan, pemeriksaan, ekspose, dan rekap bulanan.
-- Validasi kesetaraan asal pasien dengan penjamin (Naker tidak dihitung dua kali) serta ekspose minimal sama dengan pasien.
-- Data nol tampil sebagai tanda `-` pada rekap.
-- Penyimpanan otomatis dengan `localStorage` browser.
+h1 {
+  margin: 0;
+  font-size: clamp(1.7rem, 2.5vw, 2.3rem);
+  letter-spacing: -0.04em;
+}
 
-## Batasan penting
+.controls {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
 
-Versi ini belum memakai database bersama, login, kontrol akses, audit log, ekspor, atau penguncian bulan. `localStorage` hanya tersimpan di browser/perangkat yang dipakai dan tidak membagikan data antarpetugas. Jangan gunakan untuk data operasional atau masukkan identitas pasien sebelum backend, autentikasi, backup, dan keamanan ditinjau admin IT rumah sakit.
+.controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+select, input {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  height: 42px;
+  padding: 0 12px;
+}
+
+.action-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+button {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.primary {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.secondary {
+  background: #edf3ff;
+  color: var(--primary);
+  border-color: #d5e3ff;
+}
+
+.secondary.danger {
+  background: #fff1f2;
+  color: var(--red);
+  border-color: #fecdd3;
+}
+
+.secondary.success {
+  background: #ebfff2;
+  color: var(--green);
+  border-color: #bbf7d0;
+}
+
+.button.danger-outline {
+  background: #fff7f7;
+  color: var(--red);
+  border-color: #f3c1c1;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.icon-button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  padding: 0;
+}
+
+.app-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 18px 42px;
+}
+
+.user-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 8px 0 18px;
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: var(--shadow);
+}
+
+.chip-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.card, .panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+
+.card {
+  padding: 18px 18px 16px;
+}
+
+.card span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.card strong {
+  font-size: clamp(1.7rem, 3vw, 2.5rem);
+  letter-spacing: -0.05em;
+}
+
+.panel {
+  padding: 18px;
+  margin-top: 18px;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.section-head h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.issues-box {
+  background: var(--panel-2);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.muted {
+  margin: 0;
+  color: var(--muted);
+}
+
+.issue-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.issue-row:last-child {
+  border-bottom: 0;
+}
+
+.issue-badge {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.issue-badge.err {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.date-nav {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.date-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  flex: 1;
+  max-width: 240px;
+}
+
+.date-caption {
+  margin: 10px 0 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.form-section {
+  border-top: 1px solid var(--border);
+  margin-top: 18px;
+  padding-top: 18px;
+}
+
+.form-section h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.hint {
+  margin: 6px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.number-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.number-field input,
+.exam-number input {
+  width: 100%;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fff;
+}
+
+.exam-group {
+  margin-top: 12px;
+}
+
+.exam-group h4 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.exam-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.exam-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 1.4fr) repeat(2, minmax(78px, 0.8fr));
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel-2);
+}
+
+.exam-name {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.exam-number {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.exam-number input {
+  padding: 0 8px;
+  text-align: right;
+}
+
+.daily-totals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.daily-totals > div {
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.daily-totals span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.daily-totals strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 18px;
+  letter-spacing: -0.03em;
+}
+
+.status-text.ok-text { color: var(--green); }
+.status-text.error-text { color: var(--red); }
+
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.summary-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-2);
+  padding: 14px;
+}
+
+.summary-card h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.summary-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.summary-line strong {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.summary-line small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.total-line {
+  background: #edf6f1;
+  border-color: #d8ebdf;
+}
+
+.exam-summary {
+  margin-top: 14px;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 420px;
+  font-size: 12px;
+}
+
+th, td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+th {
+  background: #f8fafc;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+td:nth-child(2), td:nth-child(3), th:nth-child(2), th:nth-child(3) {
+  text-align: right;
+}
+
+.subtotal {
+  font-weight: 700;
+  background: #f5f9ff;
+}
+
+.grand-total {
+  font-weight: 800;
+  background: #ebfff2;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+}
+
+.history-item small {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+
+.history-empty {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--panel-2);
+  color: var(--muted);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.4);
+  z-index: 50;
+}
+
+.modal-card {
+  width: min(92vw, 420px);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.25);
+}
+
+.modal-card h2 {
+  margin: 0 0 18px;
+}
+
+.field-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.field-block input {
+  width: 100%;
+}
+
+.full {
+  width: 100%;
+}
+
+.demo-box {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.toast {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  background: rgba(17, 24, 39, 0.94);
+  color: white;
+  border-radius: 10px;
+  padding: 10px 14px;
+  box-shadow: 0 18px 28px rgba(0,0,0,0.18);
+  z-index: 100;
+  font-size: 13px;
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .controls {
+    width: 100%;
+  }
+
+  .controls label {
+    flex: 1;
+  }
+
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .field-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .exam-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .daily-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 430px) {
+  .action-group {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .action-group > * {
+    flex: 1 1 140px;
+  }
+
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .exam-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media print {
+  .modal-overlay, .controls, .form-actions, .date-nav, .user-bar, .section-head button, #restoreBtn, #backupBtn {
+    display: none !important;
+  }
+}
+
