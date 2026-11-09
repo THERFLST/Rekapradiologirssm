@@ -4,15 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f3f6f8">
-  <meta name="description" content="Rekap jumlah pasien dan pemeriksaan radiologi.">
-  <title>Rekap Pasien Radiologi</title>
-  <link rel="stylesheet" href="./styles.css?v=v7">
+  <meta name="description" content="Rekap pemeriksaan radiologi dan waktu pelayanan.">
+  <title>Rekap Radiologi · RS Setia Mitra</title>
+  <link rel="stylesheet" href="./styles.css?v=v8">
   <link rel="stylesheet" href="./total.css?v=v1">
   <link rel="stylesheet" href="./auth.css?v=v1">
+  <link rel="stylesheet" href="./modules.css?v=v1">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
   <script src="./app.js?v=v6" defer></script>
   <script src="./total.js?v=v2" defer></script>
   <script src="./auth.js?v=v1" defer></script>
+  <script src="./modules.js?v=v1" defer></script>
 </head>
 <body class="app-locked">
   <section id="loginScreen" class="login-screen" aria-labelledby="loginTitle">
@@ -30,18 +32,26 @@
 
   <main class="shell">
     <header class="top">
-      <div><p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p><h1>Rekap Pasien Radiologi</h1></div>
-      <nav class="nav" aria-label="Menu utama">
+      <div class="brand"><p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p><h1>Rekap Radiologi</h1></div>
+      <div class="main-menu-wrap">
+        <button id="mainMenuToggle" class="main-menu-toggle" type="button" aria-label="Buka menu utama" aria-expanded="false" aria-controls="mainMenu">☰</button>
+        <nav id="mainMenu" class="main-menu" aria-label="Menu utama" hidden>
+          <button type="button" data-module="konvensional">Rekap Konvensional</button>
+          <button type="button" data-module="usg">Rekap USG</button>
+          <button type="button" data-module="waktu">Laporan Waktu Pelayanan</button>
+        </nav>
+      </div>
+      <button type="button" id="logoutButton" class="logout-button">Keluar</button>
+      <nav class="nav conventional-nav" aria-label="Menu rekap konvensional">
         <button type="button" data-view="isi">Isi Data</button>
         <button type="button" data-view="rekap">Lihat Rekapan</button>
         <button type="button" data-view="total">Total</button>
         <button type="button" data-view="export">Export</button>
       </nav>
-      <button type="button" id="logoutButton" class="logout-button">Keluar</button>
     </header>
 
     <section id="v-isi" class="view panel">
-      <div class="section-title"><div><p class="eyebrow">Menu 1</p><h2>Isi Data</h2><p id="caption" class="muted"></p></div>
+      <div class="section-title"><div><p class="eyebrow">Rekap Konvensional</p><h2>Isi Data Harian</h2><p id="caption" class="muted"></p></div>
         <div class="date-nav"><button id="prev" type="button" aria-label="Hari sebelumnya">‹</button><label>Tanggal<input id="date" type="date"></label><button id="next" type="button" aria-label="Hari berikutnya">›</button></div></div>
       <div class="form-grid"><section><h3>Asal pasien</h3><div id="origins" class="fields"></div></section><section><h3>Penjamin</h3><p class="hint">Naker hanya keterangan, tidak dihitung dalam total penjamin.</p><div id="payers" class="fields"></div></section></div>
       <section class="exam-section"><h3>Jenis pemeriksaan</h3><p class="hint">Nilai kosong dianggap 0. Ekspose harus sama dengan atau lebih besar dari pasien.</p><div id="exams"></div></section>
@@ -51,23 +61,45 @@
     </section>
 
     <section id="v-rekap" class="view">
-      <div class="panel"><div class="section-title"><div><p class="eyebrow">Menu 2</p><h2>Lihat Rekapan</h2></div></div><div id="rekapCtl" class="ctl"></div></div>
+      <div class="panel"><div class="section-title"><div><p class="eyebrow">Rekap Konvensional</p><h2>Lihat Rekapan</h2></div></div><div id="rekapCtl" class="ctl"></div></div>
       <div id="rekapOut"></div>
     </section>
 
     <section id="v-total" class="view panel">
-      <div class="section-title"><div><p class="eyebrow">Rekap seluruh periode</p><h2>Total</h2><p class="muted">Ringkasan total dan rincian per bulan dari seluruh data rekap tersimpan.</p></div></div>
+      <div class="section-title"><div><p class="eyebrow">Rekap Konvensional</p><h2>Total</h2><p class="muted">Ringkasan total dan rincian per bulan.</p></div></div>
       <div id="totalOut" aria-live="polite"></div>
     </section>
 
     <section id="v-export" class="view panel">
-      <div class="section-title"><div><p class="eyebrow">Menu 4</p><h2>Export</h2></div></div>
+      <div class="section-title"><div><p class="eyebrow">Rekap Konvensional</p><h2>Export</h2></div></div>
       <div id="expCtl" class="ctl"></div>
       <p id="expInfo" class="muted"></p>
       <div class="export-opts">
         <article><h3>Excel (.xlsx)</h3><p class="hint">Rekap per hari dan per jenis pemeriksaan.</p><button id="xls" class="secondary" type="button">Unduh Excel</button></article>
         <article><h3>PDF / Cetak</h3><p class="hint">Buka dialog cetak, lalu pilih “Simpan sebagai PDF”.</p><button id="pdf" class="secondary" type="button">Cetak / PDF</button></article>
       </div>
+    </section>
+
+    <section id="v-usg" class="view panel module-view" hidden>
+      <div class="section-title"><div><p class="eyebrow">Modul 2</p><h2>Rekap USG</h2><p class="muted">Masukkan jumlah pemeriksaan per jenis untuk tanggal yang dipilih.</p></div></div>
+      <div class="module-controls"><label for="usgDate">Tanggal<input id="usgDate" type="date"></label></div>
+      <div id="usgFields" class="usg-fields"></div>
+      <div class="module-actions"><button id="saveUsg" class="primary-action" type="button">Simpan Rekap USG</button><span id="usgStatus" class="muted" aria-live="polite"></span></div>
+      <section class="panel module-report"><div class="section-title"><div><h3>Ringkasan per bulan</h3><p class="muted">Akumulasi berdasarkan bulan pemeriksaan.</p></div></div><div id="usgMonthly" class="scroll"></div></section>
+    </section>
+
+    <section id="v-waktu" class="view panel module-view" hidden>
+      <div class="section-title"><div><p class="eyebrow">Modul 3</p><h2>Laporan Waktu Pelayanan</h2><p class="muted">Catat waktu mulai dan selesai pemeriksaan tanpa memasukkan identitas pasien.</p></div></div>
+      <div class="service-form">
+        <label>Tanggal<input id="serviceDate" type="date"></label>
+        <label>Kelompok pemeriksaan<select id="serviceType"><option value="thorax">Thorax</option><option value="lainnya">Pemeriksaan lainnya</option></select></label>
+        <label>Waktu mulai<input id="serviceStart" type="time" required></label>
+        <label>Waktu selesai<input id="serviceEnd" type="time" required></label>
+        <button id="saveService" class="primary-action" type="button">Catat Waktu</button>
+      </div>
+      <p id="serviceStatus" class="muted" aria-live="polite"></p>
+      <section class="panel module-report"><div class="section-title"><div><h3>Rata-rata waktu per bulan</h3><p class="muted">Durasi dihitung dari waktu mulai hingga selesai.</p></div></div><div id="serviceMonthly" class="scroll"></div></section>
+      <section class="panel module-report"><div class="section-title"><div><h3>Catatan terbaru</h3><p class="muted">Hanya tanggal, kelompok, dan durasi; tidak ada nama atau nomor pasien.</p></div></div><div id="serviceRecent" class="scroll"></div></section>
     </section>
 
     <div id="printArea"></div>
