@@ -22,6 +22,12 @@
   function payerTotal(r){return PAYERS.filter(([k])=>k!=='naker').reduce((s,[k])=>s+value(r.payer[k]),0)}
   function validate(r){const errs=[];if(total(r).visits!==payerTotal(r))errs.push('Total asal pasien harus sama dengan BPJS + Umum + Asuransi.');for(const v of [...Object.values(r.source),...Object.values(r.payer),...EXAMS.flatMap(([k])=>[r.exams[k]?.patients,r.exams[k]?.exposures])]){if(v!==''&&v!=null&&(!Number.isInteger(Number(v))||Number(v)<0)){errs.push('Semua angka harus bilangan bulat non-negatif.');break}}return errs}
   function filled(r){return [...Object.values(r.source),...Object.values(r.payer),...EXAMS.flatMap(([k])=>[r.exams[k]?.patients,r.exams[k]?.exposures])].some(v=>v!==''&&v!=null)}
+  function dayStatus(k){const r=record(k);if(!filled(r))return {s:'empty',errs:[]};const errs=validate(r);return {s:errs.length?'bad':'ok',errs}}
+  function renderStrip(){const el=$('monthStrip');if(!el)return;const d=dateObj(S.date),y=d.getFullYear(),m=d.getMonth(),n=new Date(y,m+1,0).getDate();let ok=0,bad=0;
+    const cells=Array.from({length:n},(_,i)=>{const k=`${y}-${pad(m+1)}-${pad(i+1)}`,st=dayStatus(k),wd=dateObj(k).getDay();if(st.s==='ok')ok++;if(st.s==='bad')bad++;
+      const label=(`${longDate(k)} - `+(st.s==='ok'?'valid':st.s==='bad'?'perlu dicek: '+st.errs.join(' '):'belum diisi')).replace(/"/g,'&quot;');
+      return `<button type="button" class="day ${st.s}${k===S.date?' sel':''}${wd===0?' sun':''}" data-d="${k}" title="${label}" aria-label="${label}"${k===S.date?' aria-current="date"':''}><small>${DAYS[wd].slice(0,3)}</small><b>${i+1}</b><i aria-hidden="true">${st.s==='ok'?'\u2713':st.s==='bad'?'!':''}</i></button>`}).join('');
+    el.innerHTML=`<div class="strip-head"><strong>${MONTHS[m]} ${y}</strong><span class="legend"><em class="ok">\u2713 Valid ${ok}</em><em class="bad">! Perlu dicek ${bad}</em><em>Kosong ${n-ok-bad}</em></span></div><div class="strip-days">${cells}</div>`}
   function field(label,group,k,v){return `<label>${label}<input type="number" min="0" step="1" inputmode="numeric" value="${v??''}" data-group="${group}" data-key="${k}"></label>`}
 
   /* ---------- Menu 1: Isi Data ---------- */
@@ -35,7 +41,7 @@
     $('date').value=S.date;$('caption').textContent=longDate(S.date);$('caption').classList.toggle('sunday',d.getDay()===0);
     $('dayVisits').textContent=fmt(t.visits);$('dayExams').textContent=fmt(t.exams);$('dayExposure').textContent=fmt(t.exposure);
     $('dayStatus').textContent=errs.length?'Perlu dicek':'OK';$('dayStatus').className=errs.length?'bad':'good';
-    $('errors').innerHTML=errs.length?`<ul>${errs.map(e=>`<li>${e}</li>`).join('')}</ul>`:'Data harian valid.'}
+    $('errors').innerHTML=errs.length?`<ul>${errs.map(e=>`<li>${e}</li>`).join('')}</ul>`:'Data harian valid.';renderStrip()}
   function renderIsi(){renderFields();updateDay()}
   function onInput(e){const el=e.target;
     if(el.value!==''&&(!Number.isInteger(Number(el.value))||Number(el.value)<0)){el.setCustomValidity('Masukkan bilangan bulat nol atau lebih.');el.reportValidity();return}
@@ -63,7 +69,7 @@
     const a=agg(keys),pt=PAYERS.filter(([k])=>k!=='naker').reduce((s,[k])=>s+a.p[k],0);
     let np=0,ne=0,cp=0,ce=0;
     const exRows=EXAMS.map(([k,l,g])=>{const s=a.e[k];if(g==='Non Kontras'){np+=s.p;ne+=s.x}else{cp+=s.p;ce+=s.x};return `<tr><td>${l}</td><td>${g}</td><td>${fmt(s.p)}</td><td>${fmt(s.x)}</td></tr>`}).join('');
-    const daily=keys.length>1?`<div class="panel"><div class="section-title"><h2>Per hari</h2></div><div class="scroll"><table><thead><tr><th>Tanggal</th><th>Hari</th><th>Kunjungan</th><th>Pemeriksaan</th><th>Eksposur</th></tr></thead><tbody>${keys.map(k=>{const r=record(k),t=total(r);return `<tr><td>${short(k)}</td><td>${DAYS[dateObj(k).getDay()]}</td><td>${fmt(t.visits)}</td><td>${fmt(t.exams)}</td><td>${fmt(t.exposure)}</td></tr>`}).join('')}</tbody></table></div></div>`:'';
+    const daily=keys.length>1?`<div class="panel"><div class="section-title"><h2>Per hari</h2></div><div class="scroll"><table><thead><tr><th>Tanggal</th><th>Hari</th><th>Kunjungan</th><th>Pemeriksaan</th><th>Eksposur</th><th>Status</th></tr></thead><tbody>${keys.map(k=>{const r=record(k),t=total(r),st=dayStatus(k),wd=dateObj(k).getDay(),badge=st.s==='ok'?'<span class="st ok">\u2713 Valid</span>':st.s==='bad'?`<span class="st bad" title="${st.errs.join(' ').replace(/"/g,'&quot;')}">! Perlu dicek</span>`:'<span class="st">-</span>';return `<tr class="${st.s==='bad'?'invalid-row':wd===0?'sunday-row':''}"><td>${short(k)}</td><td>${DAYS[dateObj(k).getDay()]}</td><td>${fmt(t.visits)}</td><td>${fmt(t.exams)}</td><td>${fmt(t.exposure)}</td><td>${badge}</td></tr>`}).join('')}</tbody></table></div></div>`:'';
     const bad=a.rows.filter(r=>r.bad),issues=bad.length?`<div class="panel"><div class="section-title"><h2>Pengecekan</h2></div><div class="issues"><ul>${bad.map(r=>`<li><strong>${short(r.k)}:</strong> ${r.errs.join('; ')}</li>`).join('')}</ul></div></div>`:'';
     return `<section class="cards"><article><span>Kunjungan</span><strong>${fmt(a.v)}</strong></article><article><span>Pemeriksaan</span><strong>${fmt(a.n)}</strong></article><article><span>Eksposur</span><strong>${fmt(a.x)}</strong></article></section>
     <div class="panel"><div class="summary-grid"><article><h3>Asal pasien</h3>${ORIGINS.map(([k,l])=>line(l,a.o[k],a.v)).join('')+line('Total asal pasien',a.v,a.v)}</article><article><h3>Penjamin</h3>${PAYERS.filter(([k])=>k!=='naker').map(([k,l])=>line(l,a.p[k],pt)).join('')+line('Total penjamin',pt,pt)}</article></div></div>
@@ -99,6 +105,7 @@
     history.replaceState(null,'','#'+v);window.scrollTo({top:0})}
   document.querySelectorAll('.conventional-nav button').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
   $('date').addEventListener('change',e=>{if(e.target.value){S.date=e.target.value;renderIsi()}});
+  $('monthStrip').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(b){S.date=b.dataset.d;renderIsi()}});
   $('prev').addEventListener('click',()=>shift(-1));$('next').addEventListener('click',()=>shift(1));
   $('clear').addEventListener('click',()=>{if(!filled(record()))return;if(confirm(`Kosongkan data tanggal ${S.date}?`)){delete state.data[S.date];save();renderIsi()}});
   $('xls').addEventListener('click',exportExcel);$('pdf').addEventListener('click',exportPdf);

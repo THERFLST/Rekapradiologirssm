@@ -1,6 +1,6 @@
 /* ui.css v1 — tampilan modern, sidebar, responsif, dark mode. Dimuat paling akhir; tidak mengubah logika aplikasi. */
-:root{--bg:#f4f7f8;--surface:#fff;--surface2:#f7fafb;--border:#e1e9ec;--text:#14262e;--muted:#5f737c;--accent:#0f766e;--accent-soft:#e3f4f1;--accent-ink:#0b5a54;--danger:#b42318;--shadow:0 1px 2px rgba(16,40,50,.04),0 10px 30px rgba(16,40,50,.06);--sb:248px}
-html[data-theme=dark]{color-scheme:dark;--bg:#0d1417;--surface:#141e22;--surface2:#1a272c;--border:#27373d;--text:#e5eef0;--muted:#8fa3ab;--accent:#2dd4bf;--accent-soft:#12342f;--accent-ink:#5eead4;--danger:#f87171;--shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.25)}
+:root{--bg:#f4f7f8;--surface:#fff;--surface2:#f7fafb;--border:#e1e9ec;--text:#14262e;--muted:#5f737c;--accent:#0f766e;--accent-soft:#e3f4f1;--accent-ink:#0b5a54;--danger:#b42318;--ok:#15803d;--shadow:0 1px 2px rgba(16,40,50,.04),0 10px 30px rgba(16,40,50,.06);--sb:248px}
+html[data-theme=dark]{color-scheme:dark;--bg:#0d1417;--surface:#141e22;--surface2:#1a272c;--border:#27373d;--text:#e5eef0;--muted:#8fa3ab;--accent:#2dd4bf;--accent-soft:#12342f;--accent-ink:#5eead4;--danger:#f87171;--ok:#4ade80;--shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.25)}
 
 /* Dasar */
 :root{font-family:Inter,"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-serif}
@@ -120,3 +120,23 @@ html[data-theme=dark] .service-formal-heading,html[data-theme=dark] .service-tab
 html[data-theme=dark] .service-pdf-fallback{color:var(--accent-ink)}
 html[data-theme=dark] .login-card button,html[data-theme=dark] .primary-action{color:#04211d}
 }
+
+/* Penanda status tanggal (Isi Data) dan kolom Status (Per hari) */
+.month-strip{margin:0 0 16px;padding:12px;border:1px solid var(--border);border-radius:14px;background:var(--surface2)}
+.strip-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 14px;margin-bottom:10px;font-size:13px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--muted);font-size:11px}
+.legend em{font-style:normal;font-weight:650}.legend .ok{color:var(--ok)}.legend .bad{color:var(--danger)}
+.strip-days{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:6px}
+.day{display:flex;flex-direction:column;align-items:center;min-height:56px;padding:5px 2px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);line-height:1.15}
+.day small{color:var(--muted);font-size:9px;text-transform:uppercase}
+.day b{font-size:14px}
+.day i{min-height:13px;font-size:11px;font-style:normal;font-weight:800}
+.day.ok{border-color:color-mix(in srgb,var(--ok) 45%,transparent);background:color-mix(in srgb,var(--ok) 10%,var(--surface))}.day.ok i{color:var(--ok)}
+.day.bad{border-color:color-mix(in srgb,var(--danger) 50%,transparent);background:color-mix(in srgb,var(--danger) 10%,var(--surface))}.day.bad i{color:var(--danger)}
+.day.sun small{color:var(--danger)}
+.day.sel{outline:2px solid var(--accent);outline-offset:1px}
+.st{display:inline-block;padding:3px 9px;border-radius:999px;background:var(--surface2);color:var(--muted);font-size:11px;font-weight:700;white-space:nowrap}
+.st.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.st.bad{background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}
+@media(max-width:760px){.strip-days{grid-template-columns:repeat(7,1fr);gap:4px}.day{min-height:50px}}
+@media print{.month-strip{display:none}}

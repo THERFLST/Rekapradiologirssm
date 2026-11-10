@@ -17,7 +17,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
-  <script src="./app.js?v=v3" defer></script>
+  <script src="./app.js?v=v4" defer></script>
   <script src="./modules.js?v=v2" defer></script>
   <script src="./auth.js?v=v1" defer></script>
   <script src="./master.js?v=v1" defer></script>
@@ -61,6 +61,7 @@
     <section id="v-isi" class="view panel">
       <div class="section-title"><div><p class="eyebrow">Rekap Konvensional</p><h2>Isi Data</h2><p id="caption" class="muted"></p></div>
         <div class="date-nav"><button id="prev" type="button" aria-label="Hari sebelumnya">‹</button><label>Tanggal<input id="date" type="date"></label><button id="next" type="button" aria-label="Hari berikutnya">›</button></div></div>
+      <div id="monthStrip" class="month-strip" aria-label="Status tanggal pada bulan ini"></div>
       <div class="form-grid"><section><h3>Asal pasien</h3><div id="origins" class="fields"></div></section><section><h3>Penjamin</h3><p class="hint">Naker hanya keterangan, tidak dihitung dalam total penjamin.</p><div id="payers" class="fields"></div></section></div>
       <section class="exam-section"><h3>Jenis pemeriksaan</h3><p class="hint">Nilai kosong dianggap 0. Ekspose harus sama dengan atau lebih besar dari pasien.</p><div id="exams"></div></section>
       <div class="daily-summary"><span>Kunjungan <b id="dayVisits">-</b></span><span>Pemeriksaan <b id="dayExams">-</b></span><span>Ekspose <b id="dayExposure">-</b></span><span>Status <b id="dayStatus">OK</b></span></div>
