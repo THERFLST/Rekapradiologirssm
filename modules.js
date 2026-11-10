@@ -623,7 +623,7 @@
 
     const moduleTarget = `v-${module}`;
     const subtitle = document.getElementById('activeModuleSubtitle');
-    if (subtitle) subtitle.textContent = ({ konvensional: 'Rekap Konvensional', usg: 'Rekap USG', waktu: 'Laporan Waktu Pelayanan', master: 'Master Pemeriksaan' })[module] || ''; 
+    if (subtitle) subtitle.textContent = ({ konvensional: 'Rekap Konvensional', usg: 'Rekap USG', waktu: 'Laporan Waktu Pelayanan', reminder: 'Reminder USG', master: 'Master Pemeriksaan' })[module] || ''; 
     document.querySelectorAll('.view').forEach((view) => {
       const shouldHide = view.id !== moduleTarget && !['v-usg', 'v-waktu'].includes(view.id);
       if (shouldHide) {
