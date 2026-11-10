@@ -1,0 +1,122 @@
+/* ui.css v1 — tampilan modern, sidebar, responsif, dark mode. Dimuat paling akhir; tidak mengubah logika aplikasi. */
+:root{--bg:#f4f7f8;--surface:#fff;--surface2:#f7fafb;--border:#e1e9ec;--text:#14262e;--muted:#5f737c;--accent:#0f766e;--accent-soft:#e3f4f1;--accent-ink:#0b5a54;--danger:#b42318;--shadow:0 1px 2px rgba(16,40,50,.04),0 10px 30px rgba(16,40,50,.06);--sb:248px}
+html[data-theme=dark]{color-scheme:dark;--bg:#0d1417;--surface:#141e22;--surface2:#1a272c;--border:#27373d;--text:#e5eef0;--muted:#8fa3ab;--accent:#2dd4bf;--accent-soft:#12342f;--accent-ink:#5eead4;--danger:#f87171;--shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.25)}
+
+/* Dasar */
+:root{font-family:Inter,"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-serif}
+body{background:var(--bg);color:var(--text);padding-left:var(--sb);font-size:14px}
+body.app-locked{padding-left:0;background:var(--bg)}
+.shell{width:min(1120px,calc(100% - 48px));padding:24px 0 48px}
+h1{letter-spacing:-.03em}
+.eyebrow{color:var(--accent);letter-spacing:.1em}
+.muted,.hint{color:var(--muted)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Header */
+.top{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:12px;margin-bottom:18px}
+.top>div:first-child{min-width:0}
+.top h1{font-size:clamp(20px,3vw,27px)}
+.main-menu-wrap{position:absolute;width:0;height:0;margin:0}
+.main-menu-toggle{display:none!important}
+.conventional-nav{grid-column:1/-1;justify-self:start;flex-basis:auto}
+.theme-toggle,.logout-button{min-height:40px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);cursor:pointer}
+.theme-toggle{width:40px;display:grid;place-items:center;padding:0}
+.logout-button{width:auto;padding:0 14px;font-size:12px;font-weight:650}
+.theme-toggle:hover,.logout-button:hover{background:var(--accent-soft);color:var(--accent-ink)}
+
+/* Sidebar (memakai #mainMenu yang sudah ada) */
+body .main-menu,body .main-menu[hidden]{display:flex!important;flex-direction:column;gap:4px;position:fixed;z-index:30;left:0;top:0;bottom:0;right:auto;width:var(--sb);padding:18px 14px;border:0;border-right:1px solid var(--border);border-radius:0;background:var(--surface);box-shadow:none;overflow-y:auto}
+.sb-brand{display:flex;align-items:center;gap:11px;padding:2px 8px 20px}
+.sb-logo{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#2dd4bf,#0f766e);color:#fff}
+.sb-brand b{display:block;font-size:15px;letter-spacing:-.02em}
+.sb-brand small{color:var(--muted);font-size:11px}
+.sb-label{padding:0 10px 6px;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+body .main-menu button[data-module]{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-height:44px;padding:10px 12px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-size:13.5px;font-weight:600;text-align:left}
+body .main-menu button[data-module]:hover{background:var(--surface2);color:var(--text)}
+body .main-menu button[data-module].is-active{background:var(--accent-soft);color:var(--accent-ink)}
+body .main-menu button[data-module].is-active::before{content:"";position:absolute;left:-14px;top:10px;bottom:10px;width:4px;border-radius:0 4px 4px 0;background:var(--accent)}
+.mi{display:grid;place-items:center;flex:none;width:22px;height:22px}
+.ms{display:none}
+
+/* Kartu, panel, form */
+.panel,.cards article,.master-form,.usg-field,.usg-form-grid section,#v-total .total-cards article,.export-opts article{border:1px solid var(--border);border-radius:16px;background:var(--surface);box-shadow:var(--shadow)}
+.panel{padding:20px}
+.cards article{padding:16px 18px}
+.cards article:first-child strong,#v-total .total-cards strong{color:var(--accent-ink)}
+.form-grid section,.summary-grid article,.exam-row,.exam-summary,.daily-summary span,.service-period-filter,.service-stat-grid>div,.usg-exam-fields .exam-row{border:1px solid var(--border);border-radius:12px;background:var(--surface2)}
+.daily-summary b{color:var(--text)}
+input,select{min-height:40px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+button{border-color:var(--border);border-radius:10px;background:var(--surface);color:var(--text);transition:background .15s,transform .05s}
+button:hover{background:var(--accent-soft)}
+button:active{transform:translateY(1px)}
+.secondary{border-color:transparent;background:var(--accent-soft);color:var(--accent-ink)}
+.primary-action,.login-card button{border-radius:10px;background:linear-gradient(135deg,#14b8a6,#0f766e);color:#fff}
+.danger{border-color:color-mix(in srgb,var(--danger) 30%,transparent);background:color-mix(in srgb,var(--danger) 8%,transparent);color:var(--danger)}
+.bad,.errors{color:var(--danger)!important}
+.good{color:var(--accent-ink)!important}
+
+/* Tab Rekap Konvensional → pil */
+.nav{width:fit-content;max-width:100%;gap:2px;padding:4px;border:1px solid var(--border);border-radius:12px;background:var(--surface2);overflow-x:auto}
+.nav button{min-height:36px;padding:6px 14px;border:0;border-radius:9px;background:none;color:var(--muted);white-space:nowrap}
+.nav button:hover{background:none;color:var(--text)}
+.nav button.on{background:var(--surface);color:var(--accent-ink);box-shadow:0 1px 3px rgba(16,40,50,.12)}
+.seg{border-color:var(--border);border-radius:10px}
+.seg button.on{background:var(--accent-soft);color:var(--accent-ink)}
+
+/* Tabel */
+th,.module-report thead th,#v-total .total-monthly thead th,.service-data-table thead th{background:var(--surface2);color:var(--muted)}
+th,td,.module-report th,.module-report td{border-bottom-color:var(--border)}
+.subtotal{background:var(--surface2)}.grand{background:var(--accent-soft)}
+.service-table-wrap,.service-formal-report{border-color:var(--border);background:var(--surface);color:var(--text)}
+.service-upload-zone{border-color:var(--border);background:var(--surface2)}
+.service-upload-zone:hover,.service-upload-zone:focus-within{border-color:var(--accent);background:var(--accent-soft)}
+.service-upload-zone strong,.service-stat-grid strong{color:var(--text)}
+.service-upload-icon,.service-read-count{background:var(--accent-soft);color:var(--accent-ink)}
+.service-data-table tbody tr:hover{background:var(--surface2)}
+
+/* Login */
+.login-card{border-color:var(--border);border-radius:20px;background:var(--surface);box-shadow:var(--shadow)}
+.login-card h1,.login-card label{color:var(--text)}
+.login-card input{border-color:var(--border);background:var(--surface);color:var(--text)}
+
+/* Tablet: sidebar jadi rel ikon */
+@media(min-width:761px) and (max-width:1024px){
+  :root{--sb:76px}
+  body .main-menu,body .main-menu[hidden]{align-items:center;padding:16px 10px}
+  .sb-brand{padding:2px 0 18px}.sb-brand div,.sb-label,.ml{display:none}
+  body .main-menu button[data-module]{justify-content:center;width:48px;padding:10px}
+  body .main-menu button[data-module].is-active::before{left:-10px}
+}
+/* HP: sidebar jadi tab bar bawah */
+@media(max-width:760px){
+  :root{--sb:0px}
+  body{padding-bottom:calc(74px + env(safe-area-inset-bottom))}
+  .shell{width:calc(100% - 24px);padding-top:14px}
+  .panel{padding:14px;border-radius:14px}
+  body .main-menu,body .main-menu[hidden]{flex-direction:row;gap:2px;top:auto;bottom:0;left:0;right:0;width:100%;padding:6px 8px calc(6px + env(safe-area-inset-bottom));border-right:0;border-top:1px solid var(--border);overflow:visible}
+  .sb-brand,.sb-label,.ml{display:none}.ms{display:block}
+  body .main-menu button[data-module]{flex:1;flex-direction:column;justify-content:center;gap:3px;min-height:54px;padding:6px 2px;font-size:10.5px;text-align:center}
+  body .main-menu button[data-module].is-active::before{left:22%;right:22%;top:0;bottom:auto;width:auto;height:3px;border-radius:0 0 4px 4px}
+  .top{grid-template-columns:1fr auto auto}
+  .top .logout-button{width:auto}
+  .conventional-nav{justify-self:stretch;width:100%}.nav button{flex:1}
+}
+
+/* Dark mode: timpa warna bawaan yang tertulis langsung di CSS lama */
+@media screen{
+html[data-theme=dark] body,html[data-theme=dark] .daily-summary b,html[data-theme=dark] .usg-field,html[data-theme=dark] .usg-form-grid .fields label,html[data-theme=dark] .usg-row,html[data-theme=dark] .master-remove{color:var(--text)}
+html[data-theme=dark] .exam-section h4{color:var(--accent-ink)}
+html[data-theme=dark] .notice{border-color:#5c4a1c;background:#2a2412;color:#f2d28a}
+html[data-theme=dark] .sunday-row{background:#2a2412}
+html[data-theme=dark] .invalid-row{background:#3a1b1b}
+html[data-theme=dark] .master-form,html[data-theme=dark] .master-list li,html[data-theme=dark] .usg-field,html[data-theme=dark] .usg-form-grid section,html[data-theme=dark] .master-remove,html[data-theme=dark] .summary-line{border-color:var(--border);background:var(--surface)}
+html[data-theme=dark] .master-remove{color:var(--danger)}
+html[data-theme=dark] .usg-form-grid .fields input,html[data-theme=dark] .usg-exam-fields input,html[data-theme=dark] .usg-field input,html[data-theme=dark] .usg-row input,html[data-theme=dark] .module-controls input,html[data-theme=dark] .service-form input,html[data-theme=dark] .service-form select,html[data-theme=dark] .master-form input,html[data-theme=dark] .master-form select,html[data-theme=dark] .service-period-filter input{border-color:var(--border);background:var(--surface);color:var(--text)}
+html[data-theme=dark] .service-status.is-under{background:#10321f;color:#7ee2a8}
+html[data-theme=dark] .service-status.is-over{background:#3a2314;color:#f5a878}
+html[data-theme=dark] .service-status.is-incomplete{background:#222c30;color:#9db0b7}
+html[data-theme=dark] .service-formal-heading,html[data-theme=dark] .service-table-wrap{border-color:var(--border)}
+html[data-theme=dark] .service-pdf-fallback{color:var(--accent-ink)}
+html[data-theme=dark] .login-card button,html[data-theme=dark] .primary-action{color:#04211d}
+}
