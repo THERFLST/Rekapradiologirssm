@@ -178,3 +178,30 @@ html[data-theme=dark] .login-card button,html[data-theme=dark] .primary-action{c
   .rm-actions{flex:1;justify-content:flex-end}
   body .main-menu button[data-module]{font-size:10px}
 }
+
+/* Reminder USG: input batch & antrean kirim */
+.rm-banner{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.rm-banner>div,.rm-queue>div:first-child{display:flex;flex-direction:column;gap:2px}
+.rm-queue{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:0 0 14px;padding:14px 16px;border:2px solid var(--accent);border-radius:14px;background:var(--accent-soft);font-size:13px}
+.rm-queue[hidden]{display:none}
+.rm-queue span{color:var(--muted);font-size:12px}
+.rm-batch{padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--surface2)}
+.rm-batchhead{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:10px}
+.rm-batchhead h3{margin:0;font-size:16px}
+.rm-same{display:flex;flex-direction:column;gap:4px;color:var(--muted);font-size:11px;font-weight:650}
+.rm-rowshead,.rm-row{display:grid;grid-template-columns:30px 1.4fr 1fr 1fr 36px;gap:8px;align-items:center}
+.rm-rowshead{padding:0 0 6px;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.rm-rows{display:grid;gap:6px}
+.rm-no{color:var(--muted);font-size:12px;font-weight:700;text-align:center}
+.rm-row input{width:100%;min-width:0}
+.rm-row.is-bad input{border-color:var(--danger);background:color-mix(in srgb,var(--danger) 8%,var(--surface))}
+.rm-x{min-height:36px;padding:0;font-size:18px;line-height:1;color:var(--muted)}
+.rm-batchfoot{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.rm-batchfoot .primary-action{margin-left:auto}
+@media(max-width:760px){
+  .rm-rowshead{display:none}
+  .rm-row{grid-template-columns:26px 1fr 1fr 34px;grid-template-areas:"no n n x" ". w t ."; padding:10px 8px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+  .rm-no{grid-area:no}.rm-row .rn{grid-area:n}.rm-row .rw{grid-area:w}.rm-row .rt{grid-area:t}.rm-x{grid-area:x}
+  .rm-batchfoot .primary-action{width:100%;margin-left:0;order:3}
+  .rm-queue .rm-actions{width:100%}.rm-queue .rm-actions .primary-action{flex:1}
+}
