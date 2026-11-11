@@ -1,22 +1,23 @@
-FITUR SCAN KERTAS PASIEN - REMINDER USG
+PENYEMPURNAAN SCAN OCR - REMINDER USG
 
-File yang diperbarui:
-- reminder.js: tombol scan, pembacaan OCR di browser, dan pengisian otomatis ke baris input manual.
-- ui.css: tampilan tombol dan status scan.
-- index.html: pembaruan versi cache agar file baru dimuat.
+File dalam paket:
+- reminder.js: OCR multi-tahap, praproses foto, pemetaan singkatan pemeriksaan, pengisian otomatis ke kolom input pasien yang sama.
+- index.html: pembaruan versi cache agar browser memuat JavaScript/CSS terbaru.
+- ui.css: stylesheet Reminder USG (dipertahankan).
 
-Cara kerja:
-1. Buka menu Reminder USG.
-2. Tekan Scan Kertas Pasien.
-3. Ambil foto atau pilih gambar dari galeri.
-4. Tunggu proses OCR selesai.
-5. Hasil yang dikenali akan masuk ke baris kosong pertama pada formulir manual.
-6. Periksa dan edit setiap kolom, lalu tekan Kirim WA + Simpan seperti biasa.
+Peningkatan pembacaan:
+1. Foto asli dibaca terlebih dahulu, kemudian foto versi diperbesar dan ditingkatkan kontrasnya dibaca sebagai percobaan kedua bila hasil pertama belum cukup lengkap.
+2. Pemetaan istilah pemeriksaan mengenali variasi seperti USG abd, abd, abdn, abdomen -> ABDOMEN FULL; uro/partial -> PARTIAL / URO; mammae/mamae/payudara -> MAMMAE; colli/leher/tiroid -> COLLI / LEHER; serta variasi Doppler.
+3. Nomor WhatsApp dibaca dari baris berlabel No. WA/WhatsApp/Telepon/HP dan dinormalisasi oleh validasi yang sudah ada.
+4. Dokter pemeriksa/radiologi dicocokkan dengan pilihan dokter yang tersedia pada aplikasi. Bila nama dokter tidak cocok dengan daftar pilihan, kolom dokter dibiarkan kosong agar dipilih manual.
+5. Hasil scan mengisi langsung baris formulir manual yang sama. Semua kolom tetap bisa diedit, lalu gunakan tombol Kirim WA + Simpan seperti biasa.
+6. Pesan status memberi tahu data utama yang belum terbaca agar petugas melengkapinya.
 
-Catatan penting:
-- OCR memakai Tesseract.js yang dimuat dari CDN dan memerlukan koneksi internet saat pertama kali digunakan.
-- Pemrosesan OCR dilakukan di browser; foto tidak diunggah ke server aplikasi oleh fitur ini.
-- OCR tulisan tangan tidak selalu akurat. Hasil wajib diperiksa petugas sebelum dikirim.
-- Fitur ini mengisi kolom yang tersedia di formulir manual: nama, nomor WhatsApp, jenis pemeriksaan, dokter (jika cocok dengan pilihan dokter yang tersedia), dan tanggal pemeriksaan.
-- Nomor RM, klinis, tanggal registrasi, dan dokter pengirim belum memiliki kolom pada formulir Reminder USG saat ini, sehingga belum disimpan sebagai data pasien.
-- Penjamin tetap dipilih melalui pilihan massal atau kolom manual.
+Pemasangan:
+1. Cadangkan file lama terlebih dahulu.
+2. Ganti reminder.js, ui.css, dan index.html pada folder modul sesuai struktur repository.
+3. Commit/push ke GitHub Pages.
+4. Buka website dan lakukan hard refresh atau bersihkan cache bila perlu.
+
+PENTING - BATASAN AKURASI:
+OCR Tesseract berbasis browser bukan model khusus tulisan tangan. Peningkatan kontras dan pembacaan ulang dapat membantu, tetapi tidak menjamin semua tulisan tangan terbaca benar. Nama dan nomor WhatsApp, dokter pemeriksa/radiologi, serta jenis USG wajib diperiksa petugas sebelum tombol Kirim WA + Simpan ditekan. Nomor RM, klinis, tanggal registrasi, dan dokter pengirim belum dimasukkan karena formulir Reminder saat ini tidak memiliki kolom untuk menyimpannya. Foto diproses di browser; library OCR diunduh dari CDN dan memerlukan koneksi internet.

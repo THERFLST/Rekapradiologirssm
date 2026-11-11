@@ -335,63 +335,132 @@
     return window.__rmTesseractLoading;
   }
   function normalizeOCR(s) {
-    return String(s || '').replace(/[|]/g, 'I').replace(/[\u00a0]/g, ' ').replace(/\s+/g, ' ').trim();
+    return String(s || '').replace(/[|]/g, 'I').replace(/[\u00a0]/g, ' ').replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim();
   }
-  function extractAfterLabel(text, labels) {
-    var lines = String(text || '').split(/\n+/).map(normalizeOCR).filter(Boolean);
+  function cleanLabelLine(s) {
+    return normalizeOCR(s).replace(/^[^A-Za-z0-9]+/, '').trim();
+  }
+  function linesOf(text) {
+    return String(text || '').replace(/\r/g, '\n').split(/\n+/).map(cleanLabelLine).filter(Boolean);
+  }
+  function findLineValue(lines, patterns) {
     for (var i = 0; i < lines.length; i++) {
-      var line = lines[i];
-      for (var j = 0; j < labels.length; j++) {
-        var re = new RegExp('(?:^|\\b)' + labels[j] + '\\s*[:.)-]?\\s*(.*)$', 'i');
-        var m = line.match(re);
-        if (m && m[1] && m[1].trim().length > 1) return m[1].trim();
+      for (var j = 0; j < patterns.length; j++) {
+        var m = lines[i].match(patterns[j]);
+        if (m && m[1] && m[1].trim()) return m[1].trim();
       }
     }
     return '';
   }
+  function normalizeExam(raw, allText) {
+    var v = (' ' + (raw || '') + ' ' + (allText || '') + ' ').toUpperCase()
+      .replace(/[|]/g, 'I').replace(/[.,;:_-]/g, ' ').replace(/\s+/g, ' ');
+    // Variasi singkatan yang lazim ditulis pada kertas pasien.
+    var has = function (re) { return re.test(v); };
+    if (has(/\b(ABDOMEN|ABD|ABDN|ABDOM|ABDOMN|ABDOMINAL)\b/)) return 'ABDOMEN FULL';
+    if (has(/\b(PARTIAL|PART|URO|UROLOGI|TRACTUS URINARIUS)\b/)) return 'PARTIAL / URO';
+    if (has(/\b(MAMMAE|MAMAE|MAMMA|MAM|PAYUDARA|BREAST)\b/)) return 'MAMMAE';
+    if (has(/\b(JARINGAN LUNAK|JL|SOFT TISSUE)\b/)) return 'JARINGAN LUNAK';
+    if (has(/\b(COLLI|COLI|LEHER|THYROID|TIROID)\b/)) return 'COLLI / LEHER';
+    if (has(/DOPPLER.*(VASKULAR|VASCULAR)|\b(VASKULAR|VASCULAR)\b/)) return 'DOPPLER VASKULAR';
+    if (has(/DOPPLER.*TESTIS|\b(TESTIS|SCROTUM|SKROTUM)\b/)) return 'DOPPLER TESTIS';
+    return '';
+  }
+  function normalizeDoctor(raw, allText) {
+    var v = (' ' + (raw || '') + ' ' + (allText || '') + ' ').toLowerCase()
+      .replace(/0/g, 'o').replace(/[|!]/g, 'i').replace(/[^a-z. ]/g, ' ').replace(/\s+/g, ' ');
+    var names = Object.keys(DOKTER);
+    for (var i = 0; i < names.length; i++) {
+      var shortName = names[i].toLowerCase().replace(/^dr\.\s*/, '').replace(/[^a-z]/g, '');
+      if (shortName && v.replace(/[^a-z]/g, '').indexOf(shortName) >= 0) return names[i];
+    }
+    return '';
+  }
+  function parseDateValue(raw, allText) {
+    var source = (raw || '') + '\n' + (allText || '');
+    var m = source.match(/(?:\b|^)(\d{1,2})\s*[/.\-]\s*(\d{1,2})\s*[/.\-]\s*(20\d{2})(?:\b|$)/);
+    if (!m) return '';
+    var d = Number(m[1]), mo = Number(m[2]), y = Number(m[3]);
+    if (d < 1 || d > 31 || mo < 1 || mo > 12) return '';
+    var dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return '';
+    return y + '-' + pad(mo) + '-' + pad(d);
+  }
   function parseScanText(raw) {
     var text = String(raw || '').replace(/\r/g, '\n');
-    var nameRaw = extractAfterLabel(text, ['Nama(?:\\s*\\(\\s*No\\.?\\s*RM\\s*\\))?']);
-    var rmMatch = nameRaw.match(/\(?\s*(?:No\.?\s*RM)?\s*[:.]?\s*(\d{4,})\s*\)?/i) || text.match(/(?:No\.?\s*RM|RM)\s*[:.]?\s*(\d{4,})/i);
+    var lines = linesOf(text);
+    var nameRaw = findLineValue(lines, [/Nama\s*(?:\(\s*No\.?\s*RM\s*\))?\s*[:.)-]?\s*(.+)$/i, /Nama\s*Pasien\s*[:.)-]?\s*(.+)$/i]);
+    var rmMatch = nameRaw.match(/\(?\s*(?:No\.?\s*RM)?\s*[:.]?\s*(\d{4,})\s*\)?/i) || text.match(/(?:No\.?\s*RM|No\.?\s*Rekam\s*Medis|RM)\s*[:.]?\s*(\d{4,})/i);
     var name = nameRaw.replace(/\(?\s*(?:No\.?\s*RM)?\s*[:.]?\s*\d{4,}\s*\)?/i, '').replace(/\s*\([^)]*\)\s*$/, '').trim();
-    var phoneText = extractAfterLabel(text, ['No\\.?\\s*WA', 'WhatsApp', 'Telepon', 'HP']);
-    var phoneMatch = (phoneText || text).match(/(?:\+?62|0)\s*[\d\s().-]{8,18}/);
-    var phone = phoneMatch ? phoneMatch[0].replace(/[^\d+]/g, '') : '';
-    var examRaw = extractAfterLabel(text, ['Jenis\\s*Pemeriksaan(?:\\s*&\\s*Klinis)?', 'Pemeriksaan']);
-    var examUpper = (examRaw + ' ' + text).toUpperCase();
-    var exam = '';
-    if (/ABDOMEN/.test(examUpper)) exam = 'ABDOMEN FULL';
-    else if (/PARTIAL|URO/.test(examUpper)) exam = 'PARTIAL / URO';
-    else if (/MAMMAE|PAYUDARA/.test(examUpper)) exam = 'MAMMAE';
-    else if (/JARINGAN LUNAK/.test(examUpper)) exam = 'JARINGAN LUNAK';
-    else if (/COLLI|LEHER/.test(examUpper)) exam = 'COLLI / LEHER';
-    else if (/DOPPLER.*VASKULAR|VASKULAR/.test(examUpper)) exam = 'DOPPLER VASKULAR';
-    else if (/DOPPLER.*TESTIS|TESTIS/.test(examUpper)) exam = 'DOPPLER TESTIS';
-    var dateRaw = extractAfterLabel(text, ['Hari\\s*Pemeriksaan', 'Tanggal\\s*Pemeriksaan']);
-    var dateMatch = (dateRaw || text).match(/(?:\b|^)(\d{1,2})\s*[/-]\s*(\d{1,2})\s*[/-]\s*(20\d{2})(?:\b|$)/);
-    var examDate = '';
-    if (dateMatch) examDate = dateMatch[3] + '-' + pad(Number(dateMatch[2])) + '-' + pad(Number(dateMatch[1]));
-    var doctorRaw = extractAfterLabel(text, ['dr\\.?\\s*Pemeriksa', 'Dokter\\s*Pemeriksa']);
-    var doctor = '';
-    if (doctorRaw) {
-      var low = doctorRaw.toLowerCase();
-      Object.keys(DOKTER).some(function (d) { if (low.indexOf(d.toLowerCase().replace('dr. ', '')) >= 0) { doctor = d; return true; } return false; });
-    }
-    return { nama: name, wa: phone, jenis: exam, tanggal: examDate, dokter: doctor, noRM: rmMatch ? rmMatch[1] : '' };
+    name = name.replace(/\s{2,}/g, ' ').replace(/[,:;]+$/, '').trim();
+
+    var phoneRaw = findLineValue(lines, [/No\.?\s*WA\s*[:.)-]?\s*(.+)$/i, /Whats\s*App\s*[:.)-]?\s*(.+)$/i, /Telepon\s*[:.)-]?\s*(.+)$/i, /No\.?\s*HP\s*[:.)-]?\s*(.+)$/i, /HP\s*[:.)-]?\s*(.+)$/i]);
+    // OCR kerap membaca O/o sebagai 0 pada nomor tulisan tangan.
+    var phoneSource = (phoneRaw || '');
+    var phoneMatch = phoneSource.match(/[+\dOoIl|][\d\s().+\-OoIl|]{7,22}/);
+    var phone = phoneMatch ? phoneMatch[0].replace(/[Oo]/g, '0').replace(/[Il|]/g, '1').replace(/[^\d+]/g, '') : '';
+    if (phone && phone.charAt(0) !== '+' && phone.indexOf('62') !== 0 && phone.charAt(0) !== '0' && phone.charAt(0) !== '8') phone = '';
+
+    var examRaw = findLineValue(lines, [/Jenis\s*Pemeriksaan(?:\s*&\s*Klinis)?\s*[:.)-]?\s*(.+)$/i, /Pemeriksaan\s*[:.)-]?\s*(.+)$/i]);
+    // Jika label OCR terlewat, cari singkatan/istilah pada keseluruhan teks.
+    var exam = normalizeExam(examRaw, text);
+    var dateRaw = findLineValue(lines, [/Hari\s*Pemeriksaan\s*[:.)-]?\s*(.+)$/i, /Tanggal\s*Pemeriksaan\s*[:.)-]?\s*(.+)$/i]);
+    var examDate = parseDateValue(dateRaw, '');
+    var doctorRaw = findLineValue(lines, [/dr\.?\s*Pemeriksa(?:\s*\/\s*Radiologi)?\s*[:.)-]?\s*(.+)$/i, /Dokter\s*Pemeriksa(?:\s*\/\s*Radiologi)?\s*[:.)-]?\s*(.+)$/i, /Radiologi\s*[:.)-]?\s*(.+)$/i]);
+    var doctor = normalizeDoctor(doctorRaw, '');
+    return { nama: name, wa: phone, jenis: exam, tanggal: examDate, dokter: doctor, noRM: rmMatch ? rmMatch[1] : '', rawDoctor: doctorRaw };
   }
+  function imageVariants(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        try {
+          var scale = Math.max(1.8, Math.min(3, 2200 / Math.max(img.naturalWidth, img.naturalHeight)));
+          var w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale);
+          var c = document.createElement('canvas'); c.width = w; c.height = h;
+          var ctx = c.getContext('2d', { willReadFrequently: true });
+          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
+          var id = ctx.getImageData(0, 0, w, h), a = id.data;
+          for (var i = 0; i < a.length; i += 4) {
+            var g = 0.299 * a[i] + 0.587 * a[i + 1] + 0.114 * a[i + 2];
+            // Naikkan kontras tulisan tangan, tetapi jangan mengubah sumber asli.
+            var v = Math.max(0, Math.min(255, (g - 145) * 1.65 + 145));
+            a[i] = a[i + 1] = a[i + 2] = v;
+          }
+          ctx.putImageData(id, 0, 0);
+          c.toBlob(function (blob) { URL.revokeObjectURL(url); if (blob) resolve([file, blob]); else reject(new Error('Gagal menyiapkan foto untuk dibaca.')); }, 'image/png');
+        } catch (e) { URL.revokeObjectURL(url); reject(e); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('Foto tidak dapat dibuka.')); };
+      img.src = url;
+    });
+  }
+
   function firstAvailableRow() {
     var rows = Array.prototype.slice.call(document.querySelectorAll('#rmRows .rm-row'));
     return rows.find(function (r) { return !r.querySelector('.rn').value.trim() && !r.querySelector('.rw').value.trim(); }) || null;
   }
   function applyScanToForm(file) {
     if (!file || !/^image\//.test(file.type)) return scanStatus('Pilih file gambar kertas pasien.', true);
-    scanStatus('Membaca tulisan pada foto… proses dapat memerlukan beberapa saat.');
-    loadTesseract().then(function (Tesseract) {
-      return Tesseract.recognize(file, 'ind+eng', { logger: function (m) {
-        if (m.status === 'recognizing text' && typeof m.progress === 'number') scanStatus('Membaca tulisan… ' + Math.round(m.progress * 100) + '%');
-      }});
-    }).then(function (result) {
-      var parsed = parseScanText(result.data && result.data.text || '');
+    scanStatus('Menyiapkan foto dan membaca tulisan tangan…');
+    Promise.all([loadTesseract(), imageVariants(file)]).then(function (parts) {
+      var Tesseract = parts[0], variants = parts[1], worker;
+      return Tesseract.createWorker('ind+eng', 1, { logger: function (m) {
+        if (m.status === 'recognizing text' && typeof m.progress === 'number') scanStatus('Membaca tulisan tangan… ' + Math.round(m.progress * 100) + '%');
+      }}).then(function (w) { worker = w; return worker.setParameters({ preserve_interword_spaces: '1', user_defined_dpi: '300' }); })
+        .then(function () { return worker.recognize(variants[0]); })
+        .then(function (first) {
+          var p1 = parseScanText(first.data && first.data.text || '');
+          var score = [p1.nama, p1.wa, p1.jenis, p1.dokter].filter(Boolean).length;
+          if (score >= 3) return { parsed: p1, worker: worker };
+          scanStatus('Memperjelas foto untuk meningkatkan pembacaan…');
+          return worker.recognize(variants[1]).then(function (second) {
+            var p2 = parseScanText(second.data && second.data.text || '');
+            var s2 = [p2.nama, p2.wa, p2.jenis, p2.dokter].filter(Boolean).length;
+            return { parsed: s2 > score ? p2 : p1, worker: worker };
+          });
+        }).then(function (result) { return worker.terminate().then(function () { return result.parsed; }); }, function (err) { if (worker) worker.terminate(); throw err; });
+    }).then(function (parsed) {
       var row = firstAvailableRow();
       if (!row) { addRows(1); row = firstAvailableRow(); }
       if (!row) throw new Error('Tidak dapat menyiapkan baris pasien.');
@@ -399,15 +468,20 @@
       if (parsed.wa) row.querySelector('.rw').value = parsed.wa;
       if (parsed.jenis) row.querySelector('.rj').value = parsed.jenis;
       if (parsed.dokter) row.querySelector('.rd').value = parsed.dokter;
-      if (parsed.tanggal) $('rmDate').value = parsed.tanggal;
+      if (parsed.tanggal && !$('rmDate').value) $('rmDate').value = parsed.tanggal;
       row.classList.remove('is-bad');
       row.scrollIntoView({ behavior: 'smooth', block: 'center' });
       if (parsed.nama) row.querySelector('.rn').focus();
-      var found = [parsed.nama && 'nama', parsed.wa && 'nomor WA', parsed.jenis && 'jenis pemeriksaan', parsed.dokter && 'dokter', parsed.tanggal && 'tanggal'].filter(Boolean);
-      scanStatus(found.length ? 'Scan selesai. Terbaca: ' + found.join(', ') + '. Periksa dan edit kolom sebelum menekan Kirim WA + Simpan.' : 'Foto terbaca, tetapi data belum dikenali dengan yakin. Silakan isi atau koreksi kolom secara manual.', !found.length);
-      if (parsed.noRM) scanStatus(($('rmScanStatus').textContent || '') + ' Nomor RM terdeteksi (' + parsed.noRM + ') tetapi tidak ada kolom RM pada formulir saat ini.');
+      var critical = [parsed.nama && 'nama', parsed.wa && 'nomor WA', parsed.jenis && 'jenis USG', parsed.dokter && 'dokter pemeriksa/radiologi'].filter(Boolean);
+      var missing = ['nama', 'nomor WA', 'jenis USG', 'dokter pemeriksa/radiologi'].filter(function (x) {
+        return !({ 'nama': parsed.nama, 'nomor WA': parsed.wa, 'jenis USG': parsed.jenis, 'dokter pemeriksa/radiologi': parsed.dokter })[x];
+      });
+      scanStatus((critical.length ? 'Terbaca: ' + critical.join(', ') + '. ' : 'Belum ada data utama yang dikenali. ') +
+        (missing.length ? 'Periksa/isi manual: ' + missing.join(', ') + '. ' : 'Data utama terdeteksi. ') +
+        'Semua kolom tetap bisa diedit. Pastikan nama, nomor WA, dokter, dan jenis USG benar sebelum Kirim WA + Simpan.', missing.length > 0);
+      if (parsed.noRM) scanStatus(($('rmScanStatus').textContent || '') + ' No. RM terdeteksi tetapi belum memiliki kolom input.');
     }).catch(function (err) {
-      scanStatus((err && err.message) || 'Scan gagal. Silakan coba foto yang lebih jelas atau isi manual.', true);
+      scanStatus((err && err.message) || 'Scan gagal. Coba foto lebih dekat, terang, tidak miring, atau isi manual.', true);
     });
   }
 
