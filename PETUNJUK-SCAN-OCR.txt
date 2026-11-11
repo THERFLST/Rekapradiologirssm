@@ -1,0 +1,22 @@
+FITUR SCAN KERTAS PASIEN - REMINDER USG
+
+File yang diperbarui:
+- reminder.js: tombol scan, pembacaan OCR di browser, dan pengisian otomatis ke baris input manual.
+- ui.css: tampilan tombol dan status scan.
+- index.html: pembaruan versi cache agar file baru dimuat.
+
+Cara kerja:
+1. Buka menu Reminder USG.
+2. Tekan Scan Kertas Pasien.
+3. Ambil foto atau pilih gambar dari galeri.
+4. Tunggu proses OCR selesai.
+5. Hasil yang dikenali akan masuk ke baris kosong pertama pada formulir manual.
+6. Periksa dan edit setiap kolom, lalu tekan Kirim WA + Simpan seperti biasa.
+
+Catatan penting:
+- OCR memakai Tesseract.js yang dimuat dari CDN dan memerlukan koneksi internet saat pertama kali digunakan.
+- Pemrosesan OCR dilakukan di browser; foto tidak diunggah ke server aplikasi oleh fitur ini.
+- OCR tulisan tangan tidak selalu akurat. Hasil wajib diperiksa petugas sebelum dikirim.
+- Fitur ini mengisi kolom yang tersedia di formulir manual: nama, nomor WhatsApp, jenis pemeriksaan, dokter (jika cocok dengan pilihan dokter yang tersedia), dan tanggal pemeriksaan.
+- Nomor RM, klinis, tanggal registrasi, dan dokter pengirim belum memiliki kolom pada formulir Reminder USG saat ini, sehingga belum disimpan sebagai data pasien.
+- Penjamin tetap dipilih melalui pilihan massal atau kolom manual.

@@ -310,3 +310,26 @@ html[data-theme=dark] .login-card button,html[data-theme=dark] .primary-action{c
     font-size: 13px;
   }
 }
+
+
+/* Pilihan massal dokter dan penjamin pada Reminder USG */
+.rm-bulk-defaults{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0 6px;padding:12px;border:1px solid var(--border);border-radius:13px;background:var(--surface)}
+.rm-bulk-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.rm-bulk-field label{font-size:12px;font-weight:700;color:var(--muted)}
+.rm-bulk-control{display:flex;gap:7px;min-width:0}
+.rm-bulk-control select{flex:1;min-width:0;width:100%}
+.rm-bulk-control button{flex:0 0 auto;white-space:nowrap;padding-inline:13px}
+.rm-bulk-hint{margin:4px 0 12px}
+@media(max-width:600px){.rm-bulk-defaults{grid-template-columns:1fr}.rm-bulk-control button{min-width:92px}}
+
+
+/* Scan OCR Reminder USG */
+.rm-scan-tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 14px;padding:13px;border:1px dashed var(--accent);border-radius:13px;background:var(--accent-soft)}
+.rm-scan-tools>div{flex:1 1 220px;min-width:0}
+.rm-scan-tools strong{font-size:13px}
+.rm-scan-tools .hint{margin:3px 0 0;font-size:11px}
+.rm-scan-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:9px 14px;border:1px solid var(--accent);border-radius:10px;background:var(--surface);color:var(--accent);font-size:13px;font-weight:750;cursor:pointer}
+.rm-scan-button:active{transform:scale(.98)}
+.rm-scan-status{flex:1 0 100%;margin:0;color:var(--muted);font-size:12px;line-height:1.45}
+.rm-scan-status.bad{color:var(--danger)}
+@media(max-width:520px){.rm-scan-button{width:100%}}
