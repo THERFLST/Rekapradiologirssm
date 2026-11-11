@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="./auth.css?v=v1">
   <link rel="stylesheet" href="./master.css?v=v1">
   <link rel="stylesheet" href="./service-import.css?v=v3">
-  <link rel="stylesheet" href="./ui.css?v=v4">
+  <link rel="stylesheet" href="./ui.css?v=v5">
   <script>try{var t=localStorage.getItem("rekap-radiologi-theme");document.documentElement.setAttribute("data-theme",t==="dark"||t==="light"?t:(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"))}catch(e){}</script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
@@ -22,7 +22,7 @@
   <script src="./auth.js?v=v1" defer></script>
   <script src="./master.js?v=v1" defer></script>
   <script src="./service-import.js?v=v14" defer></script>
-  <script src="./reminder.js?v=v2" defer></script>
+  <script src="./reminder.js?v=v3" defer></script>
   <script src="./ui.js?v=v2" defer></script>
 </head>
 <body class="app-locked">
@@ -108,7 +108,7 @@
     </section>
 
     <section id="v-reminder" class="view panel module-view" hidden>
-      <div class="section-title"><div><p class="eyebrow">Reminder USG</p><h2>Reminder Pemeriksaan USG</h2><p class="muted">Isi nama, nomor WhatsApp, dan tanggal pemeriksaan. Setiap pasien tercatat otomatis. Pengingat hanya bisa dikirim pada H-1 (sehari sebelum pemeriksaan).</p></div></div>
+      <div class="section-title"><div><p class="eyebrow">Reminder USG</p><h2>Reminder Pemeriksaan USG</h2><p class="muted">Isi tanggal pemeriksaan sekali untuk semua pasien, lalu nama, nomor WhatsApp, dan jenis USG. Pengingat hanya bisa dikirim pada H-1; pasien yang sudah dikirim masuk ke tab Data Pasien.</p></div></div>
       <div id="reminderApp"></div>
     </section>
 
