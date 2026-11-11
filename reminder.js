@@ -1,4 +1,4 @@
-/* reminder.js v4 — Reminder USG: tanggal pemeriksaan satu kali untuk semua pasien, jenis USG pilihan,
+/* reminder.js v5 — Reminder USG: tanggal pemeriksaan satu kali untuk semua pasien, jenis USG pilihan,
    pesan WA otomatis + persiapan per jenis USG, pasien terkirim masuk ke tab Data Pasien (per tanggal & jenis). */
 (function () {
   'use strict';
@@ -83,7 +83,8 @@
           '</div>' +
           '<div class="rm-rowshead"><span>#</span><span>Nama pasien</span><span>No. WhatsApp</span><span>Jenis pemeriksaan</span><span>Dokter</span><span>Penjamin</span><span></span></div>' +
           '<div id="rmRows" class="rm-rows"></div>' +
-          '<div class="rm-batchfoot"><button type="button" id="rmAdd" class="secondary">+ Tambah baris</button><button type="button" id="rmAdd5" class="secondary">+ 5 baris</button><button class="primary-action" type="submit">Simpan Semua</button></div>' +
+          '<div class="rm-batchfoot"><button type="button" id="rmAdd" class="secondary">+ Tambah baris</button><button type="button" id="rmAdd5" class="secondary">+ 5 baris</button></div>' +
+          '<p class="hint rm-row-hint">Tekan <b>Kirim WA + Simpan</b> pada baris pasien yang ingin diproses. Data disimpan satu per satu sebelum WhatsApp dibuka.</p>' +
         '</form>' +
         '<p id="rmMsg" class="muted rm-msg" role="status" aria-live="polite"></p>' +
         '<details class="rm-tpl"><summary>Persiapan &amp; alur pendaftaran dalam pesan</summary>' +
@@ -112,12 +113,12 @@
 
   function render() {
     var t = todayKey(), tomorrow = addDays(t, 1);
-    var pending = data.filter(function (p) { return p.status !== 'terkirim'; });
+    var pending = data.filter(function (p) { return p.status !== 'terkirim' && p.status !== 'tersimpan'; });
     var due = pending.filter(function (p) { return stateOf(p) === 'siap'; });
     var b = $('rmBanner');
     b.className = 'rm-banner' + (due.length ? ' is-due' : '');
     b.innerHTML = due.length
-      ? '<div><strong>' + due.length + ' pasien perlu dikirimi reminder hari ini</strong><span>Pemeriksaan besok, ' + esc(longDate(tomorrow)) + '</span></div><button type="button" class="primary-action" data-act="queue">Kirim semua yang siap (' + due.length + ')</button>'
+      ? '<div><strong>' + due.length + ' pasien perlu dikirimi reminder hari ini</strong><span>Pemeriksaan besok, ' + esc(longDate(tomorrow)) + '. Kirim dan simpan setiap pasien melalui tombol pada barisnya.</span></div>'
       : '<strong>Tidak ada reminder yang perlu dikirim hari ini</strong><span>Pasien dengan pemeriksaan besok (' + esc(shortDate(tomorrow)) + ') akan muncul di sini.</span>';
     var rows = pending.slice().sort(function (a, c) { return a.tanggal < c.tanggal ? -1 : a.tanggal > c.tanggal ? 1 : a.nama.localeCompare(c.nama); });
     $('rmList').innerHTML = rows.length ? rows.map(item).join('') : '<p class="empty-state">' + (data.length ? 'Semua pasien sudah dikirimi reminder. Lihat di tab Data Pasien.' : 'Belum ada pasien. Isi formulir di atas untuk mencatat pasien pertama.') + '</p>';
@@ -134,7 +135,7 @@
     return '<article class="rm-item' + (can ? ' is-due' : '') + '">' +
       '<div class="rm-main"><strong>' + esc(p.nama) + '</strong><span>+' + esc(p.wa) + ' · ' + esc(p.jenis || 'Jenis belum dipilih') + '</span><small>Periksa: ' + esc(longDate(p.tanggal)) + (p.jam || DOKTER[p.dokter] ? ' · ' + esc(p.jam || DOKTER[p.dokter]) + ' WIB' : '') + (p.dokter ? ' · ' + esc(p.dokter) : '') + (p.penjamin ? ' · ' + esc(p.penjamin) : '') + '</small></div>' +
       '<div class="rm-side">' + chip + '<div class="rm-actions">' +
-        '<button type="button" class="primary-action" data-act="send" data-id="' + esc(p.id) + '"' + tip + '>Kirim WA</button>' +
+        '<button type="button" class="primary-action" data-act="send" data-id="' + esc(p.id) + '"' + tip + '>Kirim WA + Simpan</button>' +
         '<button type="button" class="danger" data-act="del" data-id="' + esc(p.id) + '">Hapus</button>' +
       '</div></div></article>';
   }
@@ -142,15 +143,15 @@
   // ---- Tab Data Pasien: hanya yang sudah dikirim, dikelompokkan per tanggal pemeriksaan lalu jenis USG
   function renderData() {
     var host = $('rmPaneData'); if (!host) return;
-    var sent = data.filter(function (p) { return p.status === 'terkirim'; });
+    var sent = data.filter(function (p) { return p.status === 'terkirim' || p.status === 'tersimpan'; });
     var months = {}; sent.forEach(function (p) { months[p.tanggal.slice(0, 7)] = 1; });
     var mlist = Object.keys(months).sort().reverse();
     if (!dpMonth || !months[dpMonth]) dpMonth = mlist[0] || '';
     var shown = sent.filter(function (p) { return p.tanggal.slice(0, 7) === dpMonth; });
     var byDate = {}; shown.forEach(function (p) { (byDate[p.tanggal] = byDate[p.tanggal] || []).push(p); });
-    var html = '<div class="rm-listhead"><h3>Data pasien (sudah dikirim reminder)</h3>' +
+    var html = '<div class="rm-listhead"><h3>Data pasien tersimpan</h3>' +
       (mlist.length ? '<label class="rm-same">Bulan<select id="rmDpMonth">' + mlist.map(function (m) { var y = m.slice(0, 4), mo = Number(m.slice(5)); return '<option value="' + m + '"' + (m === dpMonth ? ' selected' : '') + '>' + MONTHS[mo - 1] + ' ' + y + '</option>'; }).join('') + '</select></label>' : '') + '</div>';
-    if (!sent.length) html += '<p class="empty-state">Belum ada pasien yang dikirimi reminder. Pasien yang sudah dikirim WhatsApp otomatis masuk ke sini.</p>';
+    if (!sent.length) html += '<p class="empty-state">Belum ada data pasien tersimpan. Pasien yang diproses melalui tombol per baris akan masuk ke sini.</p>';
     else {
       html += '<p class="muted">' + shown.length + ' pasien pada bulan ini.</p>';
       html += Object.keys(byDate).sort().map(function (d) {
@@ -159,7 +160,7 @@
           Object.keys(byJ).sort().map(function (j) {
             return '<div class="rm-dpj"><div class="rm-dpjh"><b>' + esc(j) + '</b><span>' + byJ[j].length + ' pasien</span></div><ul>' +
               byJ[j].sort(function (a, c) { return a.nama.localeCompare(c.nama); }).map(function (p) {
-                return '<li><span><strong>' + esc(p.nama) + '</strong> · +' + esc(p.wa) + '</span><button type="button" class="danger" data-act="del" data-id="' + esc(p.id) + '">Hapus</button></li>';
+                return '<li><span><strong>' + esc(p.nama) + '</strong> · +' + esc(p.wa) + '<small class="rm-saved-status">' + (p.status === 'terkirim' ? 'Status lama: ditandai terkirim' : 'Tersimpan · WhatsApp dibuka, pengiriman belum terverifikasi') + '</small></span><button type="button" class="danger" data-act="del" data-id="' + esc(p.id) + '">Hapus</button></li>';
               }).join('') + '</ul></div>';
           }).join('') + '</section>';
       }).join('');
@@ -178,7 +179,8 @@
       '<select class="rj" aria-label="Jenis pemeriksaan baris ' + n + '">' + opts(JENIS, v.j || '', 'Pilih jenis') + '</select>' +
       '<select class="rd" aria-label="Dokter baris ' + n + '">' + opts(Object.keys(DOKTER), v.d || '', 'Dokter') + '</select>' +
       '<select class="rp" aria-label="Penjamin baris ' + n + '">' + opts(PENJAMIN, v.p || '', 'Penjamin') + '</select>' +
-      '<button type="button" class="rm-x" data-rm aria-label="Hapus baris ' + n + '">\u00d7</button></div>';
+      '<button type="button" class="rm-x" data-rm aria-label="Hapus baris ' + n + '">\u00d7</button>' +
+      '<button type="button" class="primary-action rm-row-send" data-row-send>Kirim WA + Simpan</button></div>';
   }
   function renderRows(vals) {
     var list = vals.slice(); while (list.length < MINROWS) list.push({});
@@ -193,6 +195,36 @@
     var vals = readRows(); for (var i = 0; i < n; i++) vals.push({});
     renderRows(vals);
     var inputs = document.querySelectorAll('#rmRows .rn'); inputs[inputs.length - n].focus();
+  }
+
+  function saveOneRow(row) {
+    var tgl = $('rmDate').value, petugas = $('rmPetugas').value;
+    var r = { n: row.querySelector('.rn').value, w: row.querySelector('.rw').value,
+      j: row.querySelector('.rj').value, d: row.querySelector('.rd').value, p: row.querySelector('.rp').value };
+    var nama = r.n.trim(), wa = normPhone(r.w), problem = '';
+    if (!nama) problem = 'Nama pasien belum diisi.';
+    else if (!wa) problem = 'Nomor WhatsApp tidak valid.';
+    else if (!r.j) problem = 'Pilih jenis pemeriksaan.';
+    else if (!r.d) problem = 'Pilih dokter.';
+    else if (!r.p) problem = 'Pilih penjamin.';
+    else if (!petugas) problem = 'Pilih petugas terlebih dahulu.';
+    else if (!tgl) problem = 'Isi tanggal pemeriksaan terlebih dahulu.';
+    else if (tgl < todayKey()) problem = 'Tanggal pemeriksaan sudah lewat.';
+    else if (data.some(function (p) { return p.wa === wa && p.tanggal === tgl && p.jenis === r.j; })) problem = 'Pasien dengan nomor WA, tanggal, dan jenis pemeriksaan ini sudah tercatat.';
+    if (problem) { row.classList.add('is-bad'); say(problem, true); return; }
+
+    var p = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      nama: nama, wa: wa, jenis: r.j, dokter: r.d, jam: DOKTER[r.d], penjamin: r.p,
+      petugas: petugas, tanggal: tgl, status: 'tersimpan', dibuat: new Date().toISOString() };
+    data.push(p);
+    if (!save(data)) { data.pop(); say('Gagal menyimpan data. Periksa ruang penyimpanan browser.', true); return; }
+    try { localStorage.setItem(UKEY, petugas); } catch (x) {}
+    // Simpan lebih dahulu; setelah itu buka WhatsApp. Pengiriman tetap harus ditekan manual di WhatsApp.
+    openWA(p);
+    row.querySelectorAll('input,select').forEach(function (el) { el.value = ''; });
+    row.classList.remove('is-bad');
+    say('Data ' + nama + ' berhasil disimpan. WhatsApp dibuka; tekan tombol Kirim di WhatsApp untuk mengirim pesan.', false);
+    render();
   }
 
   function onSubmit(e) {
@@ -273,7 +305,8 @@
   function init() {
     if (!$('reminderApp')) return;
     shell(); render();
-    $('rmForm').addEventListener('submit', onSubmit);
+    $('rmForm').addEventListener('submit', function (e) { e.preventDefault(); });
+    $('rmRows').addEventListener('click', function (e) { var b = e.target.closest('[data-row-send]'); if (b) saveOneRow(b.closest('.rm-row')); });
     $('rmAdd').addEventListener('click', function () { addRows(1); });
     $('rmAdd5').addEventListener('click', function () { addRows(5); });
     $('rmRows').addEventListener('click', function (e) {
