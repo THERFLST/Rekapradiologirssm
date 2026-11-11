@@ -234,3 +234,79 @@ html[data-theme=dark] .login-card button,html[data-theme=dark] .primary-action{c
 }
 @media(max-width:720px){.rm-shared{grid-template-columns:1fr}}
 \n.rm-row-hint{margin:10px 0 0}.rm-saved-status{display:block;color:var(--muted);font-size:11px;margin-top:2px}\n
+
+/* Reminder USG — perbaikan tata letak kartu input pasien di layar HP */
+@media (max-width: 900px) {
+  #rmRows .rm-row {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) 38px;
+    grid-template-areas:
+      "no n n x"
+      "w w w w"
+      "j j j j"
+      "d d p p"
+      "send send send send";
+    align-items: center;
+    gap: 9px 8px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+  }
+
+  #rmRows .rm-row > * {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  #rmRows .rm-row .rm-no { grid-area: no; }
+  #rmRows .rm-row .rn { grid-area: n; width: 100%; }
+  #rmRows .rm-row .rw { grid-area: w; width: 100%; }
+  #rmRows .rm-row .rj { grid-area: j; width: 100%; }
+  #rmRows .rm-row .rd { grid-area: d; width: 100%; }
+  #rmRows .rm-row .rp { grid-area: p; width: 100%; }
+  #rmRows .rm-row .rm-x {
+    grid-area: x;
+    width: 38px;
+    min-width: 38px;
+    justify-self: end;
+  }
+
+  #rmRows .rm-row .rm-row-send {
+    grid-area: send;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    margin: 2px 0 0;
+    padding: 11px 14px;
+    border-radius: 11px;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 380px) {
+  #rmRows .rm-row {
+    grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr) 36px;
+    gap: 8px 6px;
+    padding: 10px;
+  }
+  #rmRows .rm-row .rm-x {
+    width: 36px;
+    min-width: 36px;
+  }
+  #rmRows .rm-row .rm-row-send {
+    font-size: 13px;
+  }
+}
