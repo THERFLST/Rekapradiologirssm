@@ -1,32 +1,25 @@
-/* reminder.js v3 — Reminder USG: tanggal pemeriksaan satu kali untuk semua pasien, jenis USG pilihan,
+/* reminder.js v4 — Reminder USG: tanggal pemeriksaan satu kali untuk semua pasien, jenis USG pilihan,
    pesan WA otomatis + persiapan per jenis USG, pasien terkirim masuk ke tab Data Pasien (per tanggal & jenis). */
 (function () {
   'use strict';
-  var KEY = 'rekap-radiologi-reminder-usg-v1', TKEY = 'rekap-radiologi-reminder-usg-template-v2', PKEY = 'rekap-radiologi-reminder-usg-prep-v1';
-  var MKEY = 'rekap-radiologi-master-types-v1';
-  var BUILTIN = ['USG Abdomen', 'USG Obstetri', 'USG Ginjal/Traktus Urinarius', 'USG Tiroid', 'USG Mammae', 'USG Scrotum', 'USG Muskuloskeletal', 'USG Lainnya'];
-  var SESI = { pagi: { label: 'Pagi', jam: '10.00', puasa: '05.00' }, sore: { label: 'Sore', jam: '16.30', puasa: '12.00' } };
-  var DEFAULT_TPL =
-    'Selamat {salam} {nama},\n' +
-    'Kami dari Instalasi Radiologi RS Setia Mitra mengingatkan jadwal pemeriksaan USG Anda besok, {tanggal}, pukul {jam} WIB.\n\n' +
-    '{persiapan}\n\n' +
-    '{alur}\n\n' +
-    'Jika berhalangan hadir, mohon informasikan kepada kami. Terima kasih.';
-  // Persiapan bawaan per jenis USG. {puasa} = jam terakhir makan sesuai sesi. Bisa diubah di panel "Persiapan per jenis USG".
-  var DEFAULT_PREP = {
-    'USG Abdomen': 'Persiapan: puasa, makan terakhir pukul {puasa} WIB, boleh minum air putih. Mohon membawa air putih 1 ½ Liter dan jangan buang air kecil sebelum pemeriksaan.',
-    'USG Obstetri': 'Persiapan: tidak ada persiapan khusus.',
-    'USG Ginjal/Traktus Urinarius': 'Persiapan: tidak ada persiapan khusus. Mohon membawa air putih 1 ½ Liter dan jangan buang air kecil sebelum pemeriksaan.',
-    'USG Tiroid': 'Persiapan: tidak ada persiapan khusus.',
-    'USG Mammae': 'Persiapan: tidak ada persiapan khusus.',
-    'USG Scrotum': 'Persiapan: tidak ada persiapan khusus.',
-    'USG Muskuloskeletal': 'Persiapan: tidak ada persiapan khusus.',
-    'USG Lainnya': 'Persiapan: tidak ada persiapan khusus.'
+  var KEY = 'rekap-radiologi-reminder-usg-v1', PKEY = 'rekap-radiologi-reminder-usg-prep-v2', AKEY = 'rekap-radiologi-reminder-usg-alur-v1', UKEY = 'rekap-radiologi-reminder-usg-petugas-v1';
+  // Mengikuti sheet MASTER REMINDER_H-1_USG_RAJAL_RSSM.xlsx
+  var JENIS = ['ABDOMEN FULL', 'PARTIAL / URO', 'MAMMAE', 'JARINGAN LUNAK', 'COLLI / LEHER', 'DOPPLER VASKULAR', 'DOPPLER TESTIS'];
+  var DOKTER = { 'dr. Djoko': '16.30', 'dr. Kenny': '16.30', 'dr. Fatimah': '10.00' };
+  var PETUGAS = ['Eni', 'Novi', 'Septiani', 'Fitri', 'Sinta Nadeak', 'Rafli'];
+  var PENJAMIN = ['BPJS', 'Asuransi', 'Umum'];
+  // Jam pemeriksaan -> jam makan terakhir & mulai minum
+  var JAMTBL = { '16.30': { makan: '12.00 WIB siang', minum: '16.00 sore' }, '10.00': { makan: '05.00 WIB pagi', minum: '09.30 pagi' } };
+  var LANGSUNG = 'Untuk pendaftaran *tidak perlu daftar online*\nSaat datang bisa langsung menuju *Radiologi*';
+  var DEFAULT_ALUR = {
+    'BPJS': LANGSUNG, 'Asuransi': LANGSUNG,
+    'Umum': 'Untuk pendaftaran, mohon *daftar terlebih dahulu di bagian Pendaftaran/Registrasi*\nSetelah itu, silakan menuju ke *Radiologi*'
   };
-  var NO_PREP = 'Persiapan: tidak ada persiapan khusus.';
-  var ALUR = {
-    umum: 'Untuk pendaftaran, silakan mendaftar terlebih dahulu di Pendaftaran, kemudian menuju Radiologi.',
-    langsung: 'Untuk pendaftaran tidak perlu daftar online, saat datang bisa langsung menuju Radiologi.'
+  var TIDAK = '- Tidak ada persiapan khusus.';
+  var AIR = '- Bawa air putih 1 ½ Liter, Jam {JAM_MINUM} minum air putih sedikit sedikit tapi sering dan mulai tahan pipis.';
+  var DEFAULT_PREP = {
+    'ABDOMEN FULL': '1. Puasa makan dengan makan terakhir di jam {MAKAN_TERAKHIR}, hanya boleh minum air putih.\n2. Bawa air putih 1 ½ Liter, Jam {JAM_MINUM} minum air putih sedikit sedikit tapi sering dan mulai tahan pipis.',
+    'PARTIAL / URO': AIR, 'MAMMAE': TIDAK, 'JARINGAN LUNAK': TIDAK, 'COLLI / LEHER': TIDAK, 'DOPPLER VASKULAR': TIDAK, 'DOPPLER TESTIS': TIDAK
   };
   var MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   var DAYS = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
@@ -39,21 +32,15 @@
   function longDate(k) { var d = obj(k); return DAYS[d.getDay()] + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
   function shortDate(k) { var d = obj(k); return d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function salam() { var h = new Date().getHours(); return h < 11 ? 'Pagi' : h < 15 ? 'Siang' : h < 18 ? 'Sore' : 'Malam'; }
+  function salam() { var h = new Date().getHours(); return h >= 4 && h < 11 ? 'Pagi' : h >= 11 && h < 15 ? 'Siang' : h >= 15 && h < 18 ? 'Sore' : 'Malam'; }
 
   function loadJSON(k, fb) { try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? fb : v; } catch (e) { return fb; } }
   function saveJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
   function load() { var a = loadJSON(KEY, []); return Array.isArray(a) ? a : []; }
   function save(a) { return saveJSON(KEY, a); }
-  function getTpl() { try { return localStorage.getItem(TKEY) || DEFAULT_TPL; } catch (e) { return DEFAULT_TPL; } }
-  function setTpl(v) { try { localStorage.setItem(TKEY, v); } catch (e) {} }
-  function getPrep() { var o = loadJSON(PKEY, {}); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; }
-  function prepOf(jenis) { var o = getPrep(); return o[jenis] != null ? o[jenis] : (DEFAULT_PREP[jenis] || NO_PREP); }
-  // Jenis USG = bawaan + tambahan dari menu Master Pemeriksaan
-  function jenisList() {
-    var m = loadJSON(MKEY, {}), extra = m && Array.isArray(m.usg) ? m.usg.map(function (t) { return t && t.name; }).filter(Boolean) : [];
-    return BUILTIN.concat(extra.filter(function (n) { return BUILTIN.indexOf(n) < 0; }));
-  }
+  function objOf(k) { var o = loadJSON(k, {}); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; }
+  function prepOf(j) { var o = objOf(PKEY); return o[j] != null ? o[j] : (DEFAULT_PREP[j] || ''); }
+  function alurOf(p) { var o = objOf(AKEY); return o[p] != null ? o[p] : (DEFAULT_ALUR[p] || ''); }
 
   function normPhone(v) {
     var d = String(v).replace(/\D/g, '');
@@ -61,19 +48,28 @@
     return /^62\d{8,13}$/.test(d) ? d : '';
   }
   function stateOf(p) { var t = todayKey(), h1 = addDays(p.tanggal, -1); return h1 === t ? 'siap' : h1 > t ? 'tunggu' : 'lewat'; }
-  function sesiOf(p) { return SESI[p.sesi] || null; }
+  // Pesan mengikuti rumus kolom "Teks Pesan" di sheet INPUT
   function fill(p) {
-    var s = sesiOf(p), prep = prepOf(p.jenis || '').replace(/\{puasa\}/g, s ? s.puasa : '(sesuai arahan petugas)');
-    var out = getTpl()
-      .replace(/\{salam\}/g, salam()).replace(/\{nama\}/g, p.nama).replace(/\{tanggal\}/g, longDate(p.tanggal))
-      .replace(/\{jam\}/g, s ? s.jam : '-').replace(/\{jenis\}/g, p.jenis || 'USG')
-      .replace(/\{persiapan\}/g, prep).replace(/\{alur\}/g, ALUR[p.alur] || ALUR.langsung);
-    return out.replace(/\n{3,}/g, '\n\n').trim();
+    var jam = p.jam || DOKTER[p.dokter] || '', t = JAMTBL[jam] || { makan: '', minum: '' };
+    var prep = prepOf(p.jenis || '').replace(/\{MAKAN_TERAKHIR\}/g, t.makan).replace(/\{JAM_MINUM\}/g, t.minum);
+    var d = obj(p.tanggal), dd = pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear();
+    var besok = p.tanggal === addDays(todayKey(), 1);
+    var out = 'Selamat ' + salam() + ' bpk/ibu ' + p.nama + ', Saya ' + (p.petugas || '') + ' petugas Radiologi Rs.Setia Mitra, saya ingin mengkonfirmasi kembali untuk pemeriksaan USG yang saya jadwalkan ' +
+      (besok ? 'besok di hari ' : 'pada hari ') + DAYS[d.getDay()] + ', ' + dd + ' *jam ' + jam + ' WIB*\n\n';
+    if (prep.trim()) out += '*Persiapannya:*\n' + prep + '\n\n';
+    var alur = alurOf(p.penjamin || '');
+    if (alur.trim()) out += alur + '\n\n';
+    out += 'Mohon konfirmasi kedatangannya ya\nTerimakasih\n\n*NB: Untuk hasil Usg dapat diambil sebelum bertemu dokter saat kontrol kembali DI RADIOLOGI*';
+    return out;
   }
 
   var data = load(), tab = 'kirim', dpMonth = '';
 
+  function opts(list, sel, ph) {
+    return '<option value="">' + ph + '</option>' + list.map(function (x) { return '<option' + (x === sel ? ' selected' : '') + ' value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('');
+  }
   function shell() {
+    var lastPetugas = ''; try { lastPetugas = localStorage.getItem(UKEY) || ''; } catch (e) {}
     $('reminderApp').innerHTML =
       '<div class="seg rm-tabs" id="rmTabs"><button type="button" data-t="kirim" class="on">Kirim Reminder</button><button type="button" data-t="data">Data Pasien</button></div>' +
       '<div id="rmPaneKirim">' +
@@ -82,42 +78,36 @@
         '<form id="rmForm" class="rm-batch" autocomplete="off">' +
           '<div class="rm-batchhead"><h3>Input pasien</h3></div>' +
           '<div class="rm-shared">' +
+            '<label>Petugas<select id="rmPetugas">' + opts(PETUGAS, lastPetugas, 'Pilih petugas') + '</select></label>' +
             '<label>Tanggal pemeriksaan (semua pasien)<input id="rmDate" type="date" min="' + todayKey() + '"></label>' +
-            '<label>Sesi<select id="rmSesi"><option value="">Pilih sesi</option><option value="pagi">Pagi · 10.00 WIB</option><option value="sore">Sore · 16.30 WIB</option></select></label>' +
-            '<label>Pendaftaran<select id="rmAlur"><option value="langsung">BPJS / Asuransi (langsung ke Radiologi)</option><option value="umum">Umum (daftar dulu di Pendaftaran)</option></select></label>' +
           '</div>' +
-          '<div class="rm-rowshead"><span>#</span><span>Nama pasien</span><span>No. WhatsApp</span><span>Jenis USG</span><span></span></div>' +
+          '<div class="rm-rowshead"><span>#</span><span>Nama pasien</span><span>No. WhatsApp</span><span>Jenis pemeriksaan</span><span>Dokter</span><span>Penjamin</span><span></span></div>' +
           '<div id="rmRows" class="rm-rows"></div>' +
           '<div class="rm-batchfoot"><button type="button" id="rmAdd" class="secondary">+ Tambah baris</button><button type="button" id="rmAdd5" class="secondary">+ 5 baris</button><button class="primary-action" type="submit">Simpan Semua</button></div>' +
         '</form>' +
         '<p id="rmMsg" class="muted rm-msg" role="status" aria-live="polite"></p>' +
-        '<details class="rm-tpl"><summary>Isi pesan reminder &amp; persiapan per jenis USG</summary>' +
-          '<p class="hint">Pesan terisi otomatis per pasien. Kode yang bisa dipakai: {salam} {nama} {tanggal} {jam} {jenis} {persiapan} {alur}.</p>' +
-          '<textarea id="rmTpl" rows="9"></textarea>' +
-          '<button type="button" id="rmTplReset" class="secondary">Kembalikan pesan bawaan</button>' +
-          '<h4 class="rm-h4">Persiapan per jenis USG</h4><p class="hint">Gunakan {puasa} untuk jam terakhir makan (mengikuti sesi). Perubahan tersimpan otomatis.</p>' +
+        '<details class="rm-tpl"><summary>Persiapan &amp; alur pendaftaran dalam pesan</summary>' +
+          '<p class="hint">Persiapan per jenis pemeriksaan. Kosongkan jika tidak ada (bagian "Persiapannya" tidak muncul). Kode: {MAKAN_TERAKHIR} dan {JAM_MINUM} terisi otomatis dari jam pemeriksaan dokter. Gunakan *teks* untuk cetak tebal di WhatsApp. Perubahan tersimpan otomatis.</p>' +
           '<div id="rmPrep" class="rm-prep"></div>' +
-          '<button type="button" id="rmPrepReset" class="secondary">Kembalikan persiapan bawaan</button>' +
+          '<h4 class="rm-h4">Alur pendaftaran per penjamin</h4>' +
+          '<div id="rmAlur" class="rm-prep"></div>' +
+          '<button type="button" id="rmPrepReset" class="secondary">Kembalikan bawaan</button>' +
           '<h4 class="rm-h4">Pratinjau pesan</h4><pre id="rmPreview" class="rm-preview"></pre>' +
         '</details>' +
         '<div class="rm-listhead"><h3>Belum dikirim</h3></div><div id="rmList" class="rm-list"></div>' +
       '</div>' +
       '<div id="rmPaneData" hidden></div>';
-    $('rmTpl').value = getTpl();
-    $('rmPrep').innerHTML = jenisList().map(function (j, i) {
-      return '<label>' + esc(j) + '<textarea rows="2" data-prep="' + esc(j) + '"></textarea></label>';
-    }).join('');
+    $('rmPrep').innerHTML = JENIS.map(function (j) { return '<label>' + esc(j) + '<textarea rows="3" data-prep="' + esc(j) + '"></textarea></label>'; }).join('');
+    $('rmAlur').innerHTML = PENJAMIN.map(function (p) { return '<label>' + esc(p) + '<textarea rows="2" data-alur="' + esc(p) + '"></textarea></label>'; }).join('');
+    fillPrepBoxes(); renderRows([]); preview();
+  }
+  function fillPrepBoxes() {
     document.querySelectorAll('#rmPrep textarea').forEach(function (t) { t.value = prepOf(t.dataset.prep); });
-    renderRows([]); preview();
+    document.querySelectorAll('#rmAlur textarea').forEach(function (t) { t.value = alurOf(t.dataset.alur); });
   }
-
   function preview() {
-    var j = jenisList()[0], p = { nama: 'Ibu Contoh', tanggal: addDays(todayKey(), 1), jenis: j, sesi: $('rmSesi') && $('rmSesi').value || 'sore', alur: $('rmAlur') && $('rmAlur').value || 'langsung' };
-    var el = $('rmPreview'); if (el) el.textContent = fill(p);
-  }
-
-  function jenisOptions(sel) {
-    return '<option value="">Pilih jenis</option>' + jenisList().map(function (j) { return '<option' + (j === sel ? ' selected' : '') + ' value="' + esc(j) + '">' + esc(j) + '</option>'; }).join('');
+    var el = $('rmPreview'); if (!el) return;
+    el.textContent = fill({ nama: 'Contoh Pasien', petugas: $('rmPetugas').value || PETUGAS[0], tanggal: addDays(todayKey(), 1), jenis: 'ABDOMEN FULL', dokter: 'dr. Djoko', penjamin: 'BPJS' });
   }
 
   function render() {
@@ -142,7 +132,7 @@
     var can = st === 'siap';
     var tip = can ? '' : ' disabled title="Hanya bisa dikirim H-1 (' + esc(longDate(h1)) + ')"';
     return '<article class="rm-item' + (can ? ' is-due' : '') + '">' +
-      '<div class="rm-main"><strong>' + esc(p.nama) + '</strong><span>+' + esc(p.wa) + ' · ' + esc(p.jenis || 'Jenis belum dipilih') + '</span><small>Periksa: ' + esc(longDate(p.tanggal)) + (sesiOf(p) ? ' · ' + sesiOf(p).label : '') + '</small></div>' +
+      '<div class="rm-main"><strong>' + esc(p.nama) + '</strong><span>+' + esc(p.wa) + ' · ' + esc(p.jenis || 'Jenis belum dipilih') + '</span><small>Periksa: ' + esc(longDate(p.tanggal)) + (p.jam || DOKTER[p.dokter] ? ' · ' + esc(p.jam || DOKTER[p.dokter]) + ' WIB' : '') + (p.dokter ? ' · ' + esc(p.dokter) : '') + (p.penjamin ? ' · ' + esc(p.penjamin) : '') + '</small></div>' +
       '<div class="rm-side">' + chip + '<div class="rm-actions">' +
         '<button type="button" class="primary-action" data-act="send" data-id="' + esc(p.id) + '"' + tip + '>Kirim WA</button>' +
         '<button type="button" class="danger" data-act="del" data-id="' + esc(p.id) + '">Hapus</button>' +
@@ -181,11 +171,14 @@
 
   var MINROWS = 10;
   function rowHTML(i, v) {
-    return '<div class="rm-row' + (v.bad ? ' is-bad' : '') + '"><span class="rm-no">' + (i + 1) + '</span>' +
-      '<input class="rn" type="text" maxlength="80" placeholder="Nama lengkap" aria-label="Nama pasien baris ' + (i + 1) + '" value="' + esc(v.n || '') + '">' +
-      '<input class="rw" type="tel" inputmode="tel" placeholder="0812xxxxxxxx" aria-label="No. WhatsApp baris ' + (i + 1) + '" value="' + esc(v.w || '') + '">' +
-      '<select class="rj" aria-label="Jenis USG baris ' + (i + 1) + '">' + jenisOptions(v.j || '') + '</select>' +
-      '<button type="button" class="rm-x" data-rm aria-label="Hapus baris ' + (i + 1) + '">\u00d7</button></div>';
+    var n = i + 1;
+    return '<div class="rm-row' + (v.bad ? ' is-bad' : '') + '"><span class="rm-no">' + n + '</span>' +
+      '<input class="rn" type="text" maxlength="80" placeholder="Nama lengkap" aria-label="Nama pasien baris ' + n + '" value="' + esc(v.n || '') + '">' +
+      '<input class="rw" type="tel" inputmode="tel" placeholder="0812xxxxxxxx" aria-label="No. WhatsApp baris ' + n + '" value="' + esc(v.w || '') + '">' +
+      '<select class="rj" aria-label="Jenis pemeriksaan baris ' + n + '">' + opts(JENIS, v.j || '', 'Pilih jenis') + '</select>' +
+      '<select class="rd" aria-label="Dokter baris ' + n + '">' + opts(Object.keys(DOKTER), v.d || '', 'Dokter') + '</select>' +
+      '<select class="rp" aria-label="Penjamin baris ' + n + '">' + opts(PENJAMIN, v.p || '', 'Penjamin') + '</select>' +
+      '<button type="button" class="rm-x" data-rm aria-label="Hapus baris ' + n + '">\u00d7</button></div>';
   }
   function renderRows(vals) {
     var list = vals.slice(); while (list.length < MINROWS) list.push({});
@@ -193,7 +186,7 @@
   }
   function readRows() {
     return Array.prototype.map.call(document.querySelectorAll('#rmRows .rm-row'), function (r) {
-      return { n: r.querySelector('.rn').value, w: r.querySelector('.rw').value, j: r.querySelector('.rj').value };
+      return { n: r.querySelector('.rn').value, w: r.querySelector('.rw').value, j: r.querySelector('.rj').value, d: r.querySelector('.rd').value, p: r.querySelector('.rp').value };
     });
   }
   function addRows(n) {
@@ -204,23 +197,26 @@
 
   function onSubmit(e) {
     e.preventDefault();
-    var tgl = $('rmDate').value, sesi = $('rmSesi').value, alur = $('rmAlur').value;
-    var rows = readRows(), filled = rows.filter(function (r) { return r.n.trim() || r.w.trim() || r.j; });
+    var tgl = $('rmDate').value, petugas = $('rmPetugas').value;
+    var rows = readRows(), isFilled = function (r) { return r.n.trim() || r.w.trim() || r.j || r.d || r.p; };
     // Baris yang sama sekali kosong dibiarkan, tidak ditandai.
-    if (!filled.length) return say('Belum ada data yang diisi.', true);
+    if (!rows.some(isFilled)) return say('Belum ada data yang diisi.', true);
+    if (!petugas) return say('Pilih petugas dulu.', true);
     if (!tgl) return say('Isi tanggal pemeriksaan dulu (berlaku untuk semua pasien).', true);
     if (tgl < todayKey()) return say('Tanggal pemeriksaan sudah lewat.', true);
-    if (!sesi) return say('Pilih sesi pemeriksaan (pagi/sore) dulu.', true);
+    try { localStorage.setItem(UKEY, petugas); } catch (x) {}
     var saved = 0, keep = [], errs = [];
     rows.forEach(function (r, i) {
-      if (!r.n.trim() && !r.w.trim() && !r.j) return;
+      if (!isFilled(r)) return;
       var nama = r.n.trim(), wa = normPhone(r.w), problem = '';
       if (!nama) problem = 'nama kosong';
       else if (!wa) problem = 'No. WA tidak valid';
-      else if (!r.j) problem = 'jenis USG belum dipilih';
+      else if (!r.j) problem = 'jenis pemeriksaan belum dipilih';
+      else if (!r.d) problem = 'dokter belum dipilih';
+      else if (!r.p) problem = 'penjamin belum dipilih';
       else if (data.some(function (p) { return p.wa === wa && p.tanggal === tgl && p.jenis === r.j; })) problem = 'sudah tercatat';
-      if (problem) { keep.push({ n: r.n, w: r.w, j: r.j, bad: true }); errs.push('Baris ' + (i + 1) + ': ' + problem); return; }
-      data.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), nama: nama, wa: wa, jenis: r.j, tanggal: tgl, sesi: sesi, alur: alur, status: 'belum', dibuat: new Date().toISOString() });
+      if (problem) { keep.push({ n: r.n, w: r.w, j: r.j, d: r.d, p: r.p, bad: true }); errs.push('Baris ' + (i + 1) + ': ' + problem); return; }
+      data.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), nama: nama, wa: wa, jenis: r.j, dokter: r.d, jam: DOKTER[r.d], penjamin: r.p, petugas: petugas, tanggal: tgl, status: 'belum', dibuat: new Date().toISOString() });
       saved++;
     });
     if (saved && !save(data)) return say('Gagal menyimpan: ruang browser penuh.', true);
@@ -284,7 +280,7 @@
       var x = e.target.closest('[data-rm]'); if (!x) return;
       var row = x.closest('.rm-row'), rows = document.querySelectorAll('#rmRows .rm-row');
       if (rows.length > MINROWS) { var vals = readRows(); vals.splice(Array.prototype.indexOf.call(rows, row), 1); renderRows(vals); }
-      else { row.querySelectorAll('input').forEach(function (i) { i.value = ''; }); row.querySelector('select').value = ''; row.classList.remove('is-bad'); }
+      else { row.querySelectorAll('input,select').forEach(function (i) { i.value = ''; }); row.classList.remove('is-bad'); }
     });
     $('rmTabs').addEventListener('click', function (e) { var b = e.target.closest('[data-t]'); if (b) setTab(b.dataset.t); });
     $('rmBanner').addEventListener('click', function (e) { if (e.target.closest('[data-act="queue"]')) startQueue(); });
@@ -295,22 +291,24 @@
     $('rmList').addEventListener('click', onListClick);
     $('rmPaneData').addEventListener('click', onListClick);
     $('rmPaneData').addEventListener('change', function (e) { if (e.target.id === 'rmDpMonth') { dpMonth = e.target.value; renderData(); } });
-    $('rmTpl').addEventListener('input', function (e) { setTpl(e.target.value); preview(); });
-    $('rmTplReset').addEventListener('click', function () { $('rmTpl').value = DEFAULT_TPL; setTpl(DEFAULT_TPL); preview(); });
     $('rmPrep').addEventListener('input', function (e) {
       var j = e.target.dataset.prep; if (!j) return;
-      var o = getPrep(); o[j] = e.target.value; saveJSON(PKEY, o); preview();
+      var o = objOf(PKEY); o[j] = e.target.value; saveJSON(PKEY, o); preview();
+    });
+    $('rmAlur').addEventListener('input', function (e) {
+      var p = e.target.dataset.alur; if (!p) return;
+      var o = objOf(AKEY); o[p] = e.target.value; saveJSON(AKEY, o); preview();
     });
     $('rmPrepReset').addEventListener('click', function () {
-      try { localStorage.removeItem(PKEY); } catch (e) {}
-      document.querySelectorAll('#rmPrep textarea').forEach(function (t) { t.value = prepOf(t.dataset.prep); }); preview();
+      try { localStorage.removeItem(PKEY); localStorage.removeItem(AKEY); } catch (x) {}
+      fillPrepBoxes(); preview();
     });
-    $('rmSesi').addEventListener('change', preview); $('rmAlur').addEventListener('change', preview);
+    $('rmPetugas').addEventListener('change', preview);
     // segarkan status H-1 dan daftar jenis USG setiap modul dibuka
     var v = $('v-reminder');
     if (v) new MutationObserver(function () {
       if (v.hidden) return;
-      var vals = readRows(); renderRows(vals.filter(function (r) { return r.n || r.w || r.j; })); render();
+      render();
     }).observe(v, { attributes: true, attributeFilter: ['hidden', 'class'] });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
