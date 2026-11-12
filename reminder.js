@@ -229,20 +229,26 @@
     updateSendState(); say('Semua isian dikosongkan.', false);
   }
 
+  function clearMissing() { document.querySelectorAll('#rmForm .is-missing').forEach(function (e) { e.classList.remove('is-missing'); }); }
   function saveOneRow(row) {
     var tgl = $('rmDate').value, petugas = $('rmPetugas').value;
     var r = { n: row.querySelector('.rn').value, w: row.querySelector('.rw').value,
       j: row.querySelector('.rj').value, d: row.querySelector('.rd').value, p: row.querySelector('.rp').value };
     var nama = r.n.trim(), wa = normPhone(r.w), problem = '';
-    if (!nama) problem = 'Nama pasien belum diisi.';
-    else if (!wa) problem = 'Nomor WhatsApp tidak valid.';
-    else if (!r.j) problem = 'Pilih jenis pemeriksaan.';
-    else if (!r.d) problem = 'Pilih dokter.';
-    else if (!r.p) problem = 'Pilih penjamin.';
-    else if (!petugas) problem = 'Pilih petugas terlebih dahulu.';
-    else if (!tgl) problem = 'Isi tanggal pemeriksaan terlebih dahulu.';
-    else if (!isH1(tgl)) problem = 'Reminder hanya bisa dikirim pada H-1. Ubah tanggal pemeriksaan menjadi besok (' + longDate(addDays(todayKey(), 1)) + ').';
-    if (problem) { row.classList.add('is-bad'); say(problem, true); return; }
+    // Tandai SEMUA kolom yang belum terisi (merah), bukan hanya yang pertama.
+    clearMissing();
+    var miss = [];
+    function need(el, label, bad) { if (bad) { el.classList.add('is-missing'); miss.push(label); } }
+    need(row.querySelector('.rn'), 'nama pasien', !nama);
+    need(row.querySelector('.rw'), r.w.trim() ? 'nomor WhatsApp (tidak valid)' : 'nomor WhatsApp', !wa);
+    need(row.querySelector('.rj'), 'jenis pemeriksaan', !r.j);
+    need(row.querySelector('.rd'), 'dokter', !r.d);
+    need(row.querySelector('.rp'), 'penjamin', !r.p);
+    need($('rmPetugas'), 'petugas', !petugas);
+    need($('rmDate'), 'tanggal pemeriksaan', !tgl);
+    if (miss.length) { var first = document.querySelector('#rmForm .is-missing'); if (first && first.focus) first.focus(); return say('Belum diisi: ' + miss.join(', ') + '.', true); }
+    if (!isH1(tgl)) problem = 'Reminder hanya bisa dikirim pada H-1. Ubah tanggal pemeriksaan menjadi besok (' + longDate(addDays(todayKey(), 1)) + ').';
+    if (problem) { $('rmDate').classList.add('is-missing'); say(problem, true); return; }
 
     // Baris yang sudah pernah disimpan: cukup buka WhatsApp lagi, tanpa membuat data ganda.
     var pid = row.getAttribute('data-pid'), prev = pid && data.filter(function (x) { return x.id === pid; })[0];
@@ -542,6 +548,8 @@
       if (doctor) applyBulkValue('.rd', $('rmBulkDoctor').value, 'Dokter');
       if (payer) applyBulkValue('.rp', $('rmBulkPayer').value, 'Penjamin');
     });
+    $('rmForm').addEventListener('input', function (e) { e.target.classList && e.target.classList.remove('is-missing'); });
+    $('rmForm').addEventListener('change', function (e) { e.target.classList && e.target.classList.remove('is-missing'); });
     $('rmAdd').addEventListener('click', function () { addRows(1); });
     $('rmClearAll').addEventListener('click', clearAllRows);
     $('rmDate').addEventListener('input', updateSendState); $('rmDate').addEventListener('change', updateSendState);
