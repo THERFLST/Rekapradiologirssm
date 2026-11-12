@@ -360,3 +360,8 @@ input[type=file]::file-selector-button:hover{background:color-mix(in srgb,var(--
 #v-usg label.usg-row input{width:100%;min-height:40px;padding:8px 10px;border-radius:10px}
 #v-usg .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .primary-action:hover,.login-card button:hover{background:linear-gradient(135deg,#0f9488,#0b5a54);color:#fff}
+
+/* Tab Rekap Konvensional berada di dalam kotak, selebar panel seperti USG */
+.panel>.conventional-nav{width:100%;justify-self:auto;margin:0 0 14px}
+.panel>.conventional-nav[hidden]{display:none}
+#v-reminder .rm-tabs{width:100%}

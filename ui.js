@@ -75,7 +75,22 @@
     return 'konvensional';
   }
   var TITLES = { konvensional: 'Rekap Konvensional', usg: 'Rekap USG', waktu: 'Laporan Waktu Pelayanan', reminder: 'Reminder USG', master: 'Master Pemeriksaan' };
+  // Tab Isi Data / Lihat Rekapan / Export dipindah ke dalam kotak (panel) tampilan yang aktif,
+  // sama seperti di Rekap USG dan Reminder.
+  function placeConventionalNav() {
+    var nav = document.querySelector('.conventional-nav'); if (!nav) return;
+    var ids = ['v-isi', 'v-rekap', 'v-export'];
+    for (var i = 0; i < ids.length; i++) {
+      var v = $(ids[i]);
+      if (v && !v.hidden && v.classList.contains('on')) {
+        var box = v.classList.contains('panel') ? v : v.querySelector('.panel');
+        if (box && nav.parentNode !== box) box.insertBefore(nav, box.firstChild);
+        return;
+      }
+    }
+  }
   function syncActive() {
+    placeConventionalNav();
     var cur = activeModule();
     var sub = $('activeModuleSubtitle'); if (sub && TITLES[cur]) sub.textContent = TITLES[cur];
     document.querySelectorAll('#mainMenu button[data-module]').forEach(function (b) {
