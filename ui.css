@@ -368,3 +368,5 @@ input[type=file]::file-selector-button:hover{background:color-mix(in srgb,var(--
 
 /* Kolom wajib yang belum terisi saat tombol kirim ditekan */
 #v-reminder input.is-missing,#v-reminder select.is-missing{border-color:var(--danger);background:color-mix(in srgb,var(--danger) 9%,var(--surface));box-shadow:0 0 0 3px color-mix(in srgb,var(--danger) 18%,transparent)}
+
+.rm-scan-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}

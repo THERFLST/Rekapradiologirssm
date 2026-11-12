@@ -30,23 +30,25 @@ export default {
       const mime = input.mimeType === "image/png" ? "image/png" : "image/jpeg";
       if (!image.startsWith(`data:${mime};base64,`)) return json({ error: "Format foto tidak valid." }, 400);
 
-      const prompt = `Baca formulir/kertas pendaftaran pasien radiologi berbahasa Indonesia, termasuk TULISAN TANGAN.
-Ekstrak hanya informasi yang benar-benar terlihat dan terkait label:
-- nama: nama pasien pada label Nama (jangan masukkan nomor rekam medis)
-- wa: nomor WhatsApp/HP/telepon pasien
-- jenis: jenis pemeriksaan USG
-- dokter: nama dokter pemeriksa/radiologi (bukan dokter pengirim)
-- tanggal: tanggal pemeriksaan dalam format YYYY-MM-DD bila jelas; jika tidak jelas kosong.
-Jangan menebak, jangan memperbaiki ejaan nama, jangan mengarang digit nomor telepon. Jika ambigu atau tidak yakin, isi string kosong. Jangan mengambil nomor registrasi/rekam medis sebagai nomor WA. Untuk tiap field berikan confidence angka 0 sampai 1 yang mencerminkan keterbacaan tulisan, bukan tebakan. Keluaran JSON saja dengan bentuk:
-{"nama":"","wa":"","jenis":"","dokter":"","tanggal":"","confidence":{"nama":0,"wa":0,"jenis":0,"dokter":0,"tanggal":0}}
-Pastikan semua nilai field berupa string.`;
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
+      const prompt = `Ini kertas kecil pendaftaran USG Radiologi RS Setia Mitra (label cetak + tulisan tangan Indonesia).
+Label: Tgl daftar, Nama Pasien & No. RM, Tanggal Lahir, No. HP, Hari/Tgl Pemeriksaan, USG & Diagnosa, Dokter Radiologi, Dokter Pengirim. Kadang ada catatan tulisan tangan di pojok (mis. pasien minta ganti jadwal "ke 13/11").
+Isi JSON:
+- nama: nama pasien saja (tanpa angka dalam kurung = No. RM, tanpa umur/tgl lahir)
+- wa: nomor dari label No. HP, hanya digit
+- jenis: jenis USG dari baris "USG & Diagnosa" (mis. Abdomen, Mammae, Tiroid, Colli/Leher, Partial/Uro, Jaringan Lunak, Doppler Vaskular, Doppler Testis); abaikan diagnosis (CKD, dsb.)
+- dokter: nama dari "Dokter Radiologi" (BUKAN Dokter Pengirim)
+- tanggal: tanggal pemeriksaan format YYYY-MM-DD. Bila catatan menyebut jadwal diganti/dipindah/resched/ke tanggal lain, pakai tanggal BARU itu. Bila tahun tidak tertulis, pakai tahun dari hari ini (${today}). Ragu -> ""
+- catatan: ringkasan catatan tulisan tangan tambahan (maks 12 kata), atau ""
+Jangan menebak digit atau ejaan; ragu -> "". confidence 0-1 untuk nama, wa, jenis, dokter, tanggal.
+Keluaran JSON saja: {"nama":"","wa":"","jenis":"","dokter":"","tanggal":"","catatan":"","confidence":{"nama":0,"wa":0,"jenis":0,"dokter":0,"tanggal":0}}`;
       const ai = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { "Authorization": `Bearer ${env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           model: env.OPENAI_MODEL || "gpt-4.1-mini",
           temperature: 0,
-          max_tokens: 500,
+          max_tokens: 250,
           response_format: { type: "json_object" },
           messages: [
             { role: "system", content: "Anda adalah pembaca dokumen administrasi radiologi yang teliti. Akurasi lebih penting daripada melengkapi kolom." },
@@ -66,7 +68,7 @@ Pastikan semua nilai field berupa string.`;
       let data;
       try { data = JSON.parse(content); } catch { return json({ error: "AI mengembalikan hasil yang tidak terbaca. Silakan coba lagi." }, 502); }
       const fields = ["nama", "wa", "jenis", "dokter", "tanggal"];
-      for (const field of fields) if (typeof data[field] !== "string") data[field] = "";
+      for (const field of [...fields, "catatan"]) if (typeof data[field] !== "string") data[field] = "";
       if (!data.confidence || typeof data.confidence !== "object") data.confidence = {};
       for (const field of fields) {
         const n = Number(data.confidence[field]);

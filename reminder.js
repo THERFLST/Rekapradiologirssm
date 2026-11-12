@@ -82,7 +82,7 @@
             '<label>Tanggal pemeriksaan (semua pasien)<input id="rmDate" type="date" min="' + todayKey() + '"></label>' +
             '<p id="rmDateHint" class="hint rm-datehint" role="status" aria-live="polite"></p>' +
           '</div>' +
-          '<div class="rm-scan-tools"><div><strong>Isi otomatis dari kertas pasien</strong><p class="hint">Foto atau pilih gambar kertas. AI membaca tulisan tangan lalu mengisi kolom pasien yang sama; hasil tetap bisa diedit sebelum dikirim.</p></div><label class="rm-scan-button" for="rmScanFile"><span aria-hidden="true">▧</span> Scan dengan AI</label><input id="rmScanFile" type="file" accept="image/*" capture="environment" hidden><p id="rmScanStatus" class="rm-scan-status" role="status" aria-live="polite"></p></div>' +
+          '<div class="rm-scan-tools"><div><strong>Isi otomatis dari kertas pasien</strong><p class="hint">Foto atau pilih satu/banyak gambar kertas sekaligus. AI membaca tulisan tangan (termasuk catatan jadwal ulang) lalu mengisi baris pasien; hasil tetap bisa diedit sebelum dikirim.</p></div><div class="rm-scan-actions"><label class="rm-scan-button" for="rmScanCam"><span aria-hidden="true">▧</span> Foto kertas</label><label class="rm-scan-button" for="rmScanFile">Pilih dari galeri (bisa banyak)</label></div><input id="rmScanCam" type="file" accept="image/*" capture="environment" hidden><input id="rmScanFile" type="file" accept="image/*" multiple hidden><p id="rmScanStatus" class="rm-scan-status" role="status" aria-live="polite"></p></div>' +
           '<div class="rm-bulk-defaults">' +
             '<div class="rm-bulk-field"><label for="rmBulkDoctor">Dokter untuk semua pasien</label><div class="rm-bulk-control"><select id="rmBulkDoctor">' + opts(Object.keys(DOKTER), '', 'Pilih dokter') + '</select><button type="button" class="secondary" data-apply-doctor>Terapkan</button></div></div>' +
             '<div class="rm-bulk-field"><label for="rmBulkPayer">Penjamin untuk semua pasien</label><div class="rm-bulk-control"><select id="rmBulkPayer">' + opts(PENJAMIN, '', 'Pilih penjamin') + '</select><button type="button" class="secondary" data-apply-payer>Terapkan</button></div></div>' +
@@ -361,7 +361,7 @@
       var url = URL.createObjectURL(file), img = new Image();
       img.onload = function () {
         try {
-          var maxSide = 1800;
+          var maxSide = 1280;
           var scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
           var w = Math.max(1, Math.round(img.naturalWidth * scale));
           var h = Math.max(1, Math.round(img.naturalHeight * scale));
@@ -381,7 +381,7 @@
             };
             reader.onerror = function () { reject(new Error('Foto gagal disiapkan untuk AI.')); };
             reader.readAsDataURL(blob);
-          }, 'image/jpeg', 0.78);
+          }, 'image/jpeg', 0.72);
         } catch (e) { URL.revokeObjectURL(url); reject(e); }
       };
       img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('File foto tidak dapat dibuka.')); };
@@ -426,113 +426,94 @@
     if (Number(confidence.wa) < 0.65) wa = '';
     if (Number(confidence.jenis) < 0.55) exam = '';
     if (Number(confidence.dokter) < 0.60) doctor = '';
-    return { nama: name, wa: wa, jenis: exam, dokter: doctor, tanggal: date };
+    if (confidence.tanggal != null && Number(confidence.tanggal) < 0.5) date = '';
+    var note = cleanAIValue(data && data.catatan, 140);
+    return { nama: name, wa: wa, jenis: exam, dokter: doctor, tanggal: date, catatan: note };
   }
   function requestAIReading(file) {
     var endpoint = aiOcrEndpoint();
     if (!endpoint) return Promise.reject(new Error('AI belum diaktifkan. Pasang URL Cloudflare Worker pada konfigurasi RM_AI_OCR_ENDPOINT terlebih dahulu.'));
     return prepareScanImage(file).then(function (prepared) {
-      var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      var timer = controller ? setTimeout(function () { controller.abort(); }, 28000) : null;
-      return fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(prepared),
-        signal: controller ? controller.signal : undefined
-      }).then(function (response) {
-        if (!response.ok) return response.json().catch(function () { return {}; }).then(function (err) {
-          throw new Error(err.error || ('Layanan AI gagal (HTTP ' + response.status + ').'));
-        });
-        return response.json();
-      }).then(function (payload) {
-        if (!payload || payload.ok !== true || !payload.data) throw new Error('Jawaban AI tidak sesuai format. Coba foto ulang atau isi manual.');
-        return parseAIResult(payload.data);
-      }).catch(function (err) {
-        if (err && err.name === 'AbortError') throw new Error('Pembacaan AI melewati batas 28 detik. Periksa koneksi lalu coba lagi.');
-        throw err;
-      }).finally(function () { if (timer) clearTimeout(timer); });
+      var body = JSON.stringify(prepared);
+      function attempt(n) {
+        var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        var timer = controller ? setTimeout(function () { controller.abort(); }, 25000) : null;
+        return fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, signal: controller ? controller.signal : undefined })
+          .then(function (response) {
+            if (!response.ok) return response.json().catch(function () { return {}; }).then(function (err) {
+              var e = new Error(err.error || ('Layanan AI gagal (HTTP ' + response.status + ').'));
+              e.retry = response.status >= 500; throw e;
+            });
+            return response.json();
+          })
+          .then(function (payload) {
+            if (!payload || payload.ok !== true || !payload.data) throw new Error('Jawaban AI tidak sesuai format. Coba foto ulang atau isi manual.');
+            return parseAIResult(payload.data);
+          })
+          .catch(function (err) {
+            var transient = err && (err.name === 'AbortError' || err.name === 'TypeError' || err.retry);
+            if (transient && n < 1) return attempt(n + 1); // satu kali coba ulang otomatis
+            if (err && err.name === 'AbortError') throw new Error('Pembacaan AI melewati batas waktu. Periksa koneksi lalu coba lagi.');
+            throw err;
+          })
+          .finally(function () { if (timer) clearTimeout(timer); });
+      }
+      return attempt(0);
     });
   }
   function firstAvailableRow() {
     var rows = Array.prototype.slice.call(document.querySelectorAll('#rmRows .rm-row'));
     return rows.find(function (r) { return !r.querySelector('.rn').value.trim() && !r.querySelector('.rw').value.trim(); }) || null;
   }
-  function applyScanToForm(file) {
-    if (!file || !/^image\//.test(file.type)) return scanStatus('Pilih file gambar kertas pasien.', true);
-    if (file.size > 15 * 1024 * 1024) return scanStatus('Ukuran foto maksimal 15 MB. Kompres atau foto ulang.', true);
-    scanStatus('Mengoptimalkan foto lalu membaca tulisan tangan dengan AI…');
-    requestAIReading(file).then(function (parsed) {
-      var row = firstAvailableRow();
-      if (!row) { addRows(1); row = firstAvailableRow(); }
-      if (!row) throw new Error('Tidak dapat menyiapkan baris pasien.');
-      if (parsed.nama) row.querySelector('.rn').value = parsed.nama;
-      if (parsed.wa) row.querySelector('.rw').value = parsed.wa;
-      if (parsed.jenis) row.querySelector('.rj').value = parsed.jenis;
-      if (parsed.dokter) row.querySelector('.rd').value = parsed.dokter;
-      if (parsed.tanggal && !$('rmDate').value) $('rmDate').value = parsed.tanggal;
-      row.classList.remove('is-bad');
-      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      if (parsed.nama) row.querySelector('.rn').focus();
-      var fields = [
-        ['nama', parsed.nama], ['nomor WA', parsed.wa],
-        ['jenis USG', parsed.jenis], ['dokter pemeriksa/radiologi', parsed.dokter]
-      ];
-      var found = fields.filter(function (x) { return !!x[1]; }).map(function (x) { return x[0]; });
-      var missing = fields.filter(function (x) { return !x[1]; }).map(function (x) { return x[0]; });
-      scanStatus((found.length ? 'AI membaca: ' + found.join(', ') + '. ' : 'AI belum berhasil mengenali data utama. ') +
-        (missing.length ? 'Lengkapi/periksa: ' + missing.join(', ') + '. ' : 'Data utama berhasil dikenali. ') +
-        'Semua kolom tetap bisa diedit. Periksa kembali sebelum Kirim WA + Simpan.', missing.length > 0);
-    }).catch(function (err) {
-      scanStatus((err && err.message) || 'Scan AI gagal. Coba foto lebih terang, fokus, dan tidak miring; atau isi manual.', true);
-    });
+  var scanBusy = false;
+  function fillRowFromScan(parsed) {
+    var row = firstAvailableRow();
+    if (!row) { addRows(1); row = firstAvailableRow(); }
+    if (!row) return null;
+    if (parsed.nama) row.querySelector('.rn').value = parsed.nama;
+    if (parsed.wa) row.querySelector('.rw').value = parsed.wa;
+    if (parsed.jenis) row.querySelector('.rj').value = parsed.jenis;
+    if (parsed.dokter) row.querySelector('.rd').value = parsed.dokter;
+    row.classList.remove('is-bad');
+    row.querySelectorAll('.is-missing').forEach(function (e) { e.classList.remove('is-missing'); });
+    return row;
   }
-
-  function firstAvailableRow() {
-    var rows = Array.prototype.slice.call(document.querySelectorAll('#rmRows .rm-row'));
-    return rows.find(function (r) { return !r.querySelector('.rn').value.trim() && !r.querySelector('.rw').value.trim(); }) || null;
-  }
-  function applyScanToForm(file) {
-    if (!file || !/^image\//.test(file.type)) return scanStatus('Pilih file gambar kertas pasien.', true);
-    scanStatus('Menyiapkan foto dan membaca tulisan tangan…');
-    Promise.all([loadTesseract(), imageVariants(file)]).then(function (parts) {
-      var Tesseract = parts[0], variants = parts[1], worker;
-      return Tesseract.createWorker('ind+eng', 1, { logger: function (m) {
-        if (m.status === 'recognizing text' && typeof m.progress === 'number') scanStatus('Membaca tulisan tangan… ' + Math.round(m.progress * 100) + '%');
-      }}).then(function (w) { worker = w; return worker.setParameters({ preserve_interword_spaces: '1', user_defined_dpi: '300' }); })
-        .then(function () { return worker.recognize(variants[0]); })
-        .then(function (first) {
-          var p1 = parseScanText(first.data && first.data.text || '');
-          var score = [p1.nama, p1.wa, p1.jenis, p1.dokter].filter(Boolean).length;
-          if (score >= 3) return { parsed: p1, worker: worker };
-          scanStatus('Memperjelas foto untuk meningkatkan pembacaan…');
-          return worker.recognize(variants[1]).then(function (second) {
-            var p2 = parseScanText(second.data && second.data.text || '');
-            var s2 = [p2.nama, p2.wa, p2.jenis, p2.dokter].filter(Boolean).length;
-            return { parsed: s2 > score ? p2 : p1, worker: worker };
-          });
-        }).then(function (result) { return worker.terminate().then(function () { return result.parsed; }); }, function (err) { if (worker) worker.terminate(); throw err; });
-    }).then(function (parsed) {
-      var row = firstAvailableRow();
-      if (!row) { addRows(1); row = firstAvailableRow(); }
-      if (!row) throw new Error('Tidak dapat menyiapkan baris pasien.');
-      if (parsed.nama) row.querySelector('.rn').value = parsed.nama;
-      if (parsed.wa) row.querySelector('.rw').value = parsed.wa;
-      if (parsed.jenis) row.querySelector('.rj').value = parsed.jenis;
-      if (parsed.dokter) row.querySelector('.rd').value = parsed.dokter;
-      if (parsed.tanggal && !$('rmDate').value) $('rmDate').value = parsed.tanggal;
-      row.classList.remove('is-bad');
-      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      if (parsed.nama) row.querySelector('.rn').focus();
-      var critical = [parsed.nama && 'nama', parsed.wa && 'nomor WA', parsed.jenis && 'jenis USG', parsed.dokter && 'dokter pemeriksa/radiologi'].filter(Boolean);
-      var missing = ['nama', 'nomor WA', 'jenis USG', 'dokter pemeriksa/radiologi'].filter(function (x) {
-        return !({ 'nama': parsed.nama, 'nomor WA': parsed.wa, 'jenis USG': parsed.jenis, 'dokter pemeriksa/radiologi': parsed.dokter })[x];
+  // Beberapa foto sekaligus dibaca PARALEL, jadi 5 kertas tidak butuh 5x waktu tunggu.
+  function applyScanToForm(fileList) {
+    if (scanBusy) return scanStatus('Scan sebelumnya masih berjalan, tunggu sebentar.', true);
+    var files = Array.prototype.slice.call(fileList || []).filter(function (f) { return f && /^image\//.test(f.type); });
+    if (!files.length) return scanStatus('Pilih file gambar kertas pasien.', true);
+    if (files.some(function (f) { return f.size > 15 * 1024 * 1024; })) return scanStatus('Ukuran foto maksimal 15 MB per foto. Kompres atau foto ulang.', true);
+    if (files.length > 10) files = files.slice(0, 10);
+    scanBusy = true;
+    var t0 = Date.now(), done = 0;
+    function tick() { scanStatus('Membaca ' + files.length + ' foto dengan AI… ' + done + '/' + files.length + ' selesai · ' + Math.round((Date.now() - t0) / 1000) + ' dtk'); }
+    tick(); var timer = setInterval(tick, 1000);
+    Promise.all(files.map(function (f) {
+      return requestAIReading(f).then(function (parsed) { done++; return { ok: true, parsed: parsed }; },
+        function (err) { done++; return { ok: false, err: err }; });
+    })).then(function (results) {
+      clearInterval(timer); scanBusy = false;
+      var okList = results.filter(function (r) { return r.ok; }), notes = [], lastRow = null, firstDate = '';
+      okList.forEach(function (r, idx) {
+        var row = fillRowFromScan(r.parsed); if (!row) return; lastRow = lastRow || row;
+        var miss = [['nama', r.parsed.nama], ['nomor WA', r.parsed.wa], ['jenis USG', r.parsed.jenis], ['dokter', r.parsed.dokter]]
+          .filter(function (x) { return !x[1]; }).map(function (x) { return x[0]; });
+        var who = r.parsed.nama || ('foto ' + (idx + 1));
+        if (miss.length) notes.push(who + ': periksa ' + miss.join(', '));
+        if (r.parsed.tanggal && !firstDate) firstDate = r.parsed.tanggal;
+        if (r.parsed.catatan) notes.push(who + ' — catatan kertas: ' + r.parsed.catatan);
       });
-      scanStatus((critical.length ? 'Terbaca: ' + critical.join(', ') + '. ' : 'Belum ada data utama yang dikenali. ') +
-        (missing.length ? 'Periksa/isi manual: ' + missing.join(', ') + '. ' : 'Data utama terdeteksi. ') +
-        'Semua kolom tetap bisa diedit. Pastikan nama, nomor WA, dokter, dan jenis USG benar sebelum Kirim WA + Simpan.', missing.length > 0);
-      if (parsed.noRM) scanStatus(($('rmScanStatus').textContent || '') + ' No. RM terdeteksi tetapi belum memiliki kolom input.');
-    }).catch(function (err) {
-      scanStatus((err && err.message) || 'Scan gagal. Coba foto lebih dekat, terang, tidak miring, atau isi manual.', true);
+      if (firstDate) {
+        if (!$('rmDate').value) { $('rmDate').value = firstDate; updateSendState(); notes.push('Tanggal pemeriksaan diisi ' + longDate(firstDate) + ' (sesuai kertas, termasuk catatan jadwal ulang bila ada)'); }
+        else if ($('rmDate').value !== firstDate) notes.push('Tanggal di kertas ' + longDate(firstDate) + ' berbeda dengan tanggal yang sudah dipilih; tanggal tidak diubah');
+      }
+      var failed = results.length - okList.length, secs = Math.round((Date.now() - t0) / 1000);
+      var head = okList.length ? okList.length + ' dari ' + results.length + ' foto terbaca dalam ' + secs + ' dtk. ' : 'Scan gagal. ';
+      if (!okList.length && results[0] && results[0].err) head += (results[0].err.message || '') + ' ';
+      else if (failed) head += failed + ' foto gagal dibaca. ';
+      scanStatus(head + (notes.length ? notes.join('; ') + '. ' : (okList.length ? 'Data utama terdeteksi. ' : '')) + (okList.length ? 'Periksa kembali sebelum Kirim WA + Simpan.' : 'Coba foto lebih terang, fokus, dan tidak miring; atau isi manual.'), failed > 0 || notes.length > 0);
+      if (lastRow) lastRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   }
 
@@ -540,7 +521,7 @@
     if (!$('reminderApp')) return;
     shell(); render();
     $('rmForm').addEventListener('submit', function (e) { e.preventDefault(); });
-    $('rmScanFile').addEventListener('change', function (e) { var file = e.target.files && e.target.files[0]; if (file) applyScanToForm(file); e.target.value = ''; });
+    ['rmScanFile', 'rmScanCam'].forEach(function (id) { $(id).addEventListener('change', function (e) { var fl = e.target.files; if (fl && fl.length) applyScanToForm(Array.prototype.slice.call(fl)); e.target.value = ''; }); });
     $('rmRows').addEventListener('click', function (e) { var b = e.target.closest('[data-row-send]'); if (b) saveOneRow(b.closest('.rm-row')); });
     $('rmForm').addEventListener('click', function (e) {
       var doctor = e.target.closest('[data-apply-doctor]');
