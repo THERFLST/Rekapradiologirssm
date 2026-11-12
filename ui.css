@@ -333,3 +333,30 @@ html[data-theme=dark] .login-card button,html[data-theme=dark] .primary-action{c
 .rm-scan-status{flex:1 0 100%;margin:0;color:var(--muted);font-size:12px;line-height:1.45}
 .rm-scan-status.bad{color:var(--danger)}
 @media(max-width:520px){.rm-scan-button{width:100%}}
+
+/* ===== Penyeragaman tampilan antar menu (v9) ===== */
+/* Isian USG: label di atas, kolom penuh — sama seperti Rekap Konvensional */
+.usg-field,.usg-form-grid .fields label{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:6px;padding:0;border:0;background:transparent;box-shadow:none;color:var(--muted);font-size:12px;font-weight:650;text-align:left}
+.usg-field input,.usg-form-grid .fields input{width:100%;min-height:40px;padding:8px 10px;border-radius:10px;font:inherit}
+.usg-fields,.usg-form-grid .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.usg-form-grid section{padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface2);box-shadow:none}
+.usg-exam-fields .exam-row{padding:10px 12px}
+.usg-exam-fields input{width:96px;min-height:40px;border-radius:10px}
+/* Tab: semua menu memakai bentuk pil yang sama dan berada di atas panel */
+.nav{margin:0 0 14px}
+#v-reminder:not([hidden]){display:flex;flex-direction:column}
+#reminderApp{display:contents}
+#v-reminder .rm-tabs{order:-1}
+/* Tombol unggah file seragam dengan tombol lain */
+input[type=file]::file-selector-button{margin-right:10px;padding:8px 14px;border:0;border-radius:10px;background:var(--accent-soft);color:var(--accent-ink);font:inherit;font-weight:650;cursor:pointer}
+input[type=file]::file-selector-button:hover{background:color-mix(in srgb,var(--accent) 18%,var(--surface))}
+/* Reminder: status baris & petunjuk H-1 */
+.rm-datehint{grid-column:1/-1;min-height:0;margin:-4px 0 0}.rm-datehint:empty{display:none}
+.rm-row.is-sent input,.rm-row.is-sent select{border-color:color-mix(in srgb,var(--ok) 55%,var(--border));background:color-mix(in srgb,var(--ok) 7%,var(--surface))}
+.rm-row-send:disabled{opacity:.45;cursor:not-allowed;background:var(--surface2);color:var(--muted)}
+.rm-batchfoot .danger{margin-left:auto}
+#v-usg label.usg-row{display:flex;flex-direction:column;align-items:stretch;gap:6px;color:var(--muted);font-size:12px;font-weight:650;text-align:left}
+#v-usg label.usg-row span{text-align:left}
+#v-usg label.usg-row input{width:100%;min-height:40px;padding:8px 10px;border-radius:10px}
+#v-usg .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.primary-action:hover,.login-card button:hover{background:linear-gradient(135deg,#0f9488,#0b5a54);color:#fff}

@@ -71,7 +71,7 @@
   function shell() {
     var lastPetugas = ''; try { lastPetugas = localStorage.getItem(UKEY) || ''; } catch (e) {}
     $('reminderApp').innerHTML =
-      '<div class="seg rm-tabs" id="rmTabs"><button type="button" data-t="kirim" class="on">Kirim Reminder</button><button type="button" data-t="data">Data Pasien</button></div>' +
+      '<div class="nav rm-tabs" id="rmTabs"><button type="button" data-t="kirim" class="on">Kirim Reminder</button><button type="button" data-t="data">Data Pasien</button></div>' +
       '<div id="rmPaneKirim">' +
         '<div id="rmBanner" class="rm-banner" role="status" aria-live="polite"></div>' +
         '<div id="rmQueue" class="rm-queue" hidden></div>' +
@@ -80,6 +80,7 @@
           '<div class="rm-shared">' +
             '<label>Petugas<select id="rmPetugas">' + opts(PETUGAS, lastPetugas, 'Pilih petugas') + '</select></label>' +
             '<label>Tanggal pemeriksaan (semua pasien)<input id="rmDate" type="date" min="' + todayKey() + '"></label>' +
+            '<p id="rmDateHint" class="hint rm-datehint" role="status" aria-live="polite"></p>' +
           '</div>' +
           '<div class="rm-scan-tools"><div><strong>Isi otomatis dari kertas pasien</strong><p class="hint">Foto atau pilih gambar kertas. AI membaca tulisan tangan lalu mengisi kolom pasien yang sama; hasil tetap bisa diedit sebelum dikirim.</p></div><label class="rm-scan-button" for="rmScanFile"><span aria-hidden="true">▧</span> Scan dengan AI</label><input id="rmScanFile" type="file" accept="image/*" capture="environment" hidden><p id="rmScanStatus" class="rm-scan-status" role="status" aria-live="polite"></p></div>' +
           '<div class="rm-bulk-defaults">' +
@@ -89,7 +90,7 @@
           '<p class="hint rm-bulk-hint">Pilih dokter atau penjamin, lalu tekan Terapkan. Pilihan akan mengisi seluruh baris dan tetap bisa diubah satu per satu.</p>' +
           '<div class="rm-rowshead"><span>#</span><span>Nama pasien</span><span>No. WhatsApp</span><span>Jenis pemeriksaan</span><span>Dokter</span><span>Penjamin</span><span></span></div>' +
           '<div id="rmRows" class="rm-rows"></div>' +
-          '<div class="rm-batchfoot"><button type="button" id="rmAdd" class="secondary">+ Tambah baris</button><button type="button" id="rmAdd5" class="secondary">+ 5 baris</button></div>' +
+          '<div class="rm-batchfoot"><button type="button" id="rmAdd" class="secondary">+ Tambah baris</button><button type="button" id="rmAdd5" class="secondary">+ 5 baris</button><button type="button" id="rmClearAll" class="danger">Kosongkan semua isi</button></div>' +
           '<p class="hint rm-row-hint">Tekan <b>Kirim WA + Simpan</b> pada baris pasien yang ingin diproses. Data disimpan satu per satu sebelum WhatsApp dibuka.</p>' +
         '</form>' +
         '<p id="rmMsg" class="muted rm-msg" role="status" aria-live="polite"></p>' +
@@ -106,7 +107,7 @@
       '<div id="rmPaneData" hidden></div>';
     $('rmPrep').innerHTML = JENIS.map(function (j) { return '<label>' + esc(j) + '<textarea rows="3" data-prep="' + esc(j) + '"></textarea></label>'; }).join('');
     $('rmAlur').innerHTML = PENJAMIN.map(function (p) { return '<label>' + esc(p) + '<textarea rows="2" data-alur="' + esc(p) + '"></textarea></label>'; }).join('');
-    fillPrepBoxes(); renderRows([]); preview();
+    fillPrepBoxes(); renderRows(new Array(STARTROWS).fill(0).map(function () { return {}; })); updateSendState(); preview();
   }
   function fillPrepBoxes() {
     document.querySelectorAll('#rmPrep textarea').forEach(function (t) { t.value = prepOf(t.dataset.prep); });
@@ -176,10 +177,10 @@
 
   function say(text, bad) { var m = $('rmMsg'); m.textContent = text; m.classList.toggle('bad', !!bad); }
 
-  var MINROWS = 10;
+  var MINROWS = 1, STARTROWS = 10;
   function rowHTML(i, v) {
     var n = i + 1;
-    return '<div class="rm-row' + (v.bad ? ' is-bad' : '') + '"><span class="rm-no">' + n + '</span>' +
+    return '<div class="rm-row' + (v.bad ? ' is-bad' : '') + (v.pid ? ' is-sent' : '') + '"' + (v.pid ? ' data-pid="' + esc(v.pid) + '"' : '') + '><span class="rm-no">' + n + '</span>' +
       '<input class="rn" type="text" maxlength="80" placeholder="Nama lengkap" aria-label="Nama pasien baris ' + n + '" value="' + esc(v.n || '') + '">' +
       '<input class="rw" type="tel" inputmode="tel" placeholder="0812xxxxxxxx" aria-label="No. WhatsApp baris ' + n + '" value="' + esc(v.w || '') + '">' +
       '<select class="rj" aria-label="Jenis pemeriksaan baris ' + n + '">' + opts(JENIS, v.j || '', 'Pilih jenis') + '</select>' +
@@ -194,12 +195,12 @@
   }
   function readRows() {
     return Array.prototype.map.call(document.querySelectorAll('#rmRows .rm-row'), function (r) {
-      return { n: r.querySelector('.rn').value, w: r.querySelector('.rw').value, j: r.querySelector('.rj').value, d: r.querySelector('.rd').value, p: r.querySelector('.rp').value };
+      return { n: r.querySelector('.rn').value, w: r.querySelector('.rw').value, j: r.querySelector('.rj').value, d: r.querySelector('.rd').value, p: r.querySelector('.rp').value, pid: r.getAttribute('data-pid') || '' };
     });
   }
   function addRows(n) {
     var vals = readRows(); for (var i = 0; i < n; i++) vals.push({});
-    renderRows(vals);
+    renderRows(vals); updateSendState();
     var inputs = document.querySelectorAll('#rmRows .rn'); inputs[inputs.length - n].focus();
   }
 
@@ -209,6 +210,23 @@
     rows.forEach(function (row) { row.querySelector(selector).value = value; row.classList.remove('is-bad'); });
     say(label + ' berhasil diterapkan ke ' + rows.length + ' baris. Setiap baris tetap bisa diedit.', false);
     preview();
+  }
+
+  function isH1(tgl) { return !!tgl && tgl === addDays(todayKey(), 1); }
+  // Tombol kirim WA di setiap baris hanya aktif bila tanggal pemeriksaan = besok (H-1).
+  function updateSendState() {
+    var tgl = $('rmDate') ? $('rmDate').value : '', ok = isH1(tgl);
+    var tip = ok ? '' : (tgl ? 'Hanya bisa dikirim H-1 (pemeriksaan besok, ' + shortDate(addDays(todayKey(), 1)) + ')' : 'Isi tanggal pemeriksaan (harus besok / H-1)');
+    document.querySelectorAll('#rmRows [data-row-send]').forEach(function (b) { b.disabled = !ok; b.title = tip; });
+    var h = $('rmDateHint');
+    if (h) { h.textContent = tgl && !ok ? 'Bukan H-1: WhatsApp hanya bisa dikirim jika tanggal pemeriksaan besok (' + longDate(addDays(todayKey(), 1)) + ').' : ''; h.classList.toggle('bad', !!(tgl && !ok)); }
+  }
+  function clearAllRows() {
+    var filled = readRows().some(function (r) { return r.n.trim() || r.w.trim() || r.j || r.d || r.p; });
+    if (!filled) return say('Semua isian sudah kosong.', false);
+    if (!confirm('Kosongkan semua isian pasien? Data yang sudah tersimpan di tab Data Pasien tidak ikut terhapus.')) return;
+    renderRows(new Array(STARTROWS).fill(0).map(function () { return {}; }));
+    updateSendState(); say('Semua isian dikosongkan.', false);
   }
 
   function saveOneRow(row) {
@@ -223,9 +241,15 @@
     else if (!r.p) problem = 'Pilih penjamin.';
     else if (!petugas) problem = 'Pilih petugas terlebih dahulu.';
     else if (!tgl) problem = 'Isi tanggal pemeriksaan terlebih dahulu.';
-    else if (tgl < todayKey()) problem = 'Tanggal pemeriksaan sudah lewat.';
-    else if (data.some(function (p) { return p.wa === wa && p.tanggal === tgl && p.jenis === r.j; })) problem = 'Pasien dengan nomor WA, tanggal, dan jenis pemeriksaan ini sudah tercatat.';
+    else if (!isH1(tgl)) problem = 'Reminder hanya bisa dikirim pada H-1. Ubah tanggal pemeriksaan menjadi besok (' + longDate(addDays(todayKey(), 1)) + ').';
     if (problem) { row.classList.add('is-bad'); say(problem, true); return; }
+
+    // Baris yang sudah pernah disimpan: cukup buka WhatsApp lagi, tanpa membuat data ganda.
+    var pid = row.getAttribute('data-pid'), prev = pid && data.filter(function (x) { return x.id === pid; })[0];
+    if (prev) { openWA(prev); say('WhatsApp dibuka lagi untuk ' + prev.nama + '. Data tidak disimpan ganda.', false); return; }
+    if (data.some(function (p) { return p.wa === wa && p.tanggal === tgl && p.jenis === r.j; })) {
+      row.classList.add('is-bad'); say('Pasien dengan nomor WA, tanggal, dan jenis pemeriksaan ini sudah tercatat.', true); return;
+    }
 
     var p = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
       nama: nama, wa: wa, jenis: r.j, dokter: r.d, jam: DOKTER[r.d], penjamin: r.p,
@@ -233,11 +257,10 @@
     data.push(p);
     if (!save(data)) { data.pop(); say('Gagal menyimpan data. Periksa ruang penyimpanan browser.', true); return; }
     try { localStorage.setItem(UKEY, petugas); } catch (x) {}
-    // Simpan lebih dahulu; setelah itu buka WhatsApp. Pengiriman tetap harus ditekan manual di WhatsApp.
     openWA(p);
-    row.querySelectorAll('input,select').forEach(function (el) { el.value = ''; });
-    row.classList.remove('is-bad');
-    say('Data ' + nama + ' berhasil disimpan. WhatsApp dibuka; tekan tombol Kirim di WhatsApp untuk mengirim pesan.', false);
+    // Isian TIDAK dihapus otomatis; hapus manual lewat tombol × atau "Kosongkan semua isi".
+    row.setAttribute('data-pid', p.id); row.classList.remove('is-bad'); row.classList.add('is-sent');
+    say('Data ' + nama + ' berhasil disimpan. WhatsApp dibuka; tekan tombol Kirim di WhatsApp. Isian tetap ada sampai kamu hapus manual.', false);
     render();
   }
 
@@ -520,12 +543,14 @@
       if (payer) applyBulkValue('.rp', $('rmBulkPayer').value, 'Penjamin');
     });
     $('rmAdd').addEventListener('click', function () { addRows(1); });
+    $('rmClearAll').addEventListener('click', clearAllRows);
+    $('rmDate').addEventListener('input', updateSendState); $('rmDate').addEventListener('change', updateSendState);
     $('rmAdd5').addEventListener('click', function () { addRows(5); });
     $('rmRows').addEventListener('click', function (e) {
       var x = e.target.closest('[data-rm]'); if (!x) return;
       var row = x.closest('.rm-row'), rows = document.querySelectorAll('#rmRows .rm-row');
-      if (rows.length > MINROWS) { var vals = readRows(); vals.splice(Array.prototype.indexOf.call(rows, row), 1); renderRows(vals); }
-      else { row.querySelectorAll('input,select').forEach(function (i) { i.value = ''; }); row.classList.remove('is-bad'); }
+      if (rows.length > MINROWS) { var vals = readRows(); vals.splice(Array.prototype.indexOf.call(rows, row), 1); renderRows(vals); updateSendState(); }
+      else { row.querySelectorAll('input,select').forEach(function (i) { i.value = ''; }); row.removeAttribute('data-pid'); row.classList.remove('is-bad', 'is-sent'); }
     });
     $('rmTabs').addEventListener('click', function (e) { var b = e.target.closest('[data-t]'); if (b) setTab(b.dataset.t); });
     $('rmBanner').addEventListener('click', function (e) { if (e.target.closest('[data-act="queue"]')) startQueue(); });
@@ -553,7 +578,7 @@
     var v = $('v-reminder');
     if (v) new MutationObserver(function () {
       if (v.hidden) return;
-      render();
+      render(); updateSendState();
     }).observe(v, { attributes: true, attributeFilter: ['hidden', 'class'] });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();

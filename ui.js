@@ -74,8 +74,10 @@
     }
     return 'konvensional';
   }
+  var TITLES = { konvensional: 'Rekap Konvensional', usg: 'Rekap USG', waktu: 'Laporan Waktu Pelayanan', reminder: 'Reminder USG', master: 'Master Pemeriksaan' };
   function syncActive() {
     var cur = activeModule();
+    var sub = $('activeModuleSubtitle'); if (sub && TITLES[cur]) sub.textContent = TITLES[cur];
     document.querySelectorAll('#mainMenu button[data-module]').forEach(function (b) {
       var on = b.dataset.module === cur;
       b.classList.toggle('is-active', on);

@@ -411,8 +411,8 @@
       <div id="usg-isi-view" class="usg-subview">
       <div class="section-title">
         <div>
-          <p class="eyebrow">Modul USG</p>
-          <h2>Isi Data Harian</h2>
+          <p class="eyebrow">Rekap USG</p>
+          <h2>Isi Data</h2>
           <p id="usgCaption" class="muted"></p>
         </div>
         <div class="date-nav">
