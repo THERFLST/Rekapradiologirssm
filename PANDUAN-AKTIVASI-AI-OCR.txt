@@ -1,0 +1,50 @@
+PANDUAN AKTIVASI AI VISION - SCAN PASIEN REMINDER USG
+
+Pembaruan ini mengganti OCR Tesseract yang berat dengan satu permintaan AI Vision.
+Foto diperkecil di perangkat (maksimal sisi 1800 px, JPEG kualitas 78%) sebelum dikirim.
+Tidak ada pemuatan pustaka OCR besar di browser. Hasil AI langsung mengisi baris input
+pasien yang sudah ada. Petugas tetap wajib memeriksa dan mengedit semua kolom.
+
+PENTING: Repository GitHub Pages bersifat publik. Jangan pernah menaruh OPENAI_API_KEY
+di index.html, reminder.js, file .env frontend, atau GitHub Pages. Gunakan Cloudflare Worker.
+
+A. Deploy backend Cloudflare Worker
+1. Buat Worker baru di https://dash.cloudflare.com/ -> Workers & Pages.
+2. Tempel isi file cloudflare-worker/ai-ocr-worker.js ke editor Worker lalu Deploy.
+3. Buka Settings -> Variables and Secrets.
+4. Tambahkan Secret bernama OPENAI_API_KEY dengan API key OpenAI milik organisasi/akun
+   yang akan membayar penggunaan API.
+5. Tambahkan Variable ALLOWED_ORIGIN dengan origin situs GitHub Pages, misalnya:
+   https://therflst.github.io
+   (Jika situs menggunakan custom domain, isi origin custom domain tersebut.)
+6. Opsional: Variable OPENAI_MODEL = gpt-4.1-mini.
+7. Deploy ulang dan salin URL Worker, misalnya https://nama-worker.nama-akun.workers.dev.
+
+B. Hubungkan GitHub Pages
+Di index.html, temukan konfigurasi:
+window.RM_AI_OCR_ENDPOINT = window.RM_AI_OCR_ENDPOINT || "";
+Ganti string kosong dengan URL Worker yang didapat, contoh:
+window.RM_AI_OCR_ENDPOINT = "https://nama-worker.nama-akun.workers.dev";
+Commit dan push ke GitHub. URL endpoint bukan rahasia; API key tetap hanya di Worker Secret.
+
+C. Alur penggunaan
+1. Buka menu Reminder USG -> Scan dengan AI.
+2. Foto/pilih foto kertas pasien dengan tulisan cukup fokus, terang, dan tidak terpotong.
+3. AI mengisi Nama, No. WA, Jenis USG, Dokter pemeriksa/radiologi, dan tanggal bila terbaca.
+4. Periksa dan edit hasil pada baris pasien yang sama.
+5. Isi petugas, tanggal pemeriksaan, dan penjamin jika belum ada, lalu gunakan tombol
+   Kirim WA + Simpan seperti alur biasa.
+
+Catatan akurasi dan privasi
+- Model dapat salah membaca tulisan tangan. Confidence rendah akan membuat kolom kosong,
+  bukan dipaksakan terisi. Nomor telepon tidak boleh diterka.
+- Jika nama/nomor/dokter/jenis USG tidak terbaca, foto ulang atau isi manual.
+- Gambar dikirim ke endpoint Worker dan diteruskan ke OpenAI API untuk pemrosesan.
+  Jangan unggah dokumen yang tidak berwenang diproses. Pastikan penggunaan sesuai kebijakan
+  privasi, persetujuan, dan aturan internal fasilitas kesehatan.
+- Worker contoh ini tidak menyimpan gambar atau hasil ke database/log aplikasi secara sengaja.
+  Tetap batasi akses Worker, pantau pemakaian API, dan atur billing/limit pada akun API.
+- Kecepatan bergantung jaringan, ukuran foto, dan ketersediaan layanan AI. Targetnya
+  menghilangkan unduhan OCR besar dan hanya melakukan satu permintaan AI; waktu sangat cepat
+  tidak dapat dijamin di semua koneksi.
+- Fitur manual tetap berfungsi bila AI belum dikonfigurasi atau sedang gagal.
