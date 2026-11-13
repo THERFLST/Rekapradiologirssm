@@ -345,6 +345,7 @@ html[data-theme=dark] .login-card button,html[data-theme=dark] .primary-action{c
 /* Tab: semua menu memakai bentuk pil yang sama dan berada di atas panel */
 .nav{margin:0 0 14px}
 #v-reminder.on:not([hidden]){display:flex;flex-direction:column}
+#v-reminder:not(.on){display:none!important}
 #reminderApp{display:contents}
 #v-reminder .rm-tabs{order:-1}
 /* Tombol unggah file seragam dengan tombol lain */
