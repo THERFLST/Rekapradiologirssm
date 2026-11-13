@@ -82,7 +82,13 @@
             '<label>Tanggal pemeriksaan (semua pasien)<input id="rmDate" type="date" min="' + todayKey() + '"></label>' +
             '<p id="rmDateHint" class="hint rm-datehint" role="status" aria-live="polite"></p>' +
           '</div>' +
-          '<div class="rm-scan-tools"><div><strong>Isi otomatis dari kertas pasien</strong><p class="hint">Foto atau pilih satu/banyak gambar kertas sekaligus. AI membaca tulisan tangan (termasuk catatan jadwal ulang) lalu mengisi baris pasien; hasil tetap bisa diedit sebelum dikirim.</p></div><div class="rm-scan-actions"><label class="rm-scan-button" for="rmScanCam"><span aria-hidden="true">▧</span> Foto kertas</label><label class="rm-scan-button" for="rmScanFile">Pilih dari galeri (bisa banyak)</label></div><input id="rmScanCam" type="file" accept="image/*" capture="environment" hidden><input id="rmScanFile" type="file" accept="image/*" multiple hidden><p id="rmScanStatus" class="rm-scan-status" role="status" aria-live="polite"></p></div>' +
+          '<div class="rm-scan-tools"><div><strong>Isi otomatis dari kertas pasien</strong>' +
+            '<p class="hint">Tanpa AI, tanpa biaya, langsung di HP. <b>iPhone:</b> ketuk kotak di bawah → <b>Scan Text</b> (ikon kamera) → arahkan ke kertas → <b>Insert</b>. Atau buka foto kertas → tahan tulisan → <b>Salin Semua</b> → tempel di sini. Boleh banyak kertas sekaligus.</p></div>' +
+            '<textarea id="rmScanText" class="rm-scan-text" rows="4" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Hasil scan/teks kertas muncul di sini…"></textarea>' +
+            '<div class="rm-scan-actions"><button type="button" id="rmScanParse" class="rm-scan-button rm-scan-go">Isi dari teks</button><button type="button" id="rmScanTextClear" class="rm-scan-button">Hapus teks</button>' +
+            (aiOcrEndpoint() ? '<label class="rm-scan-button" for="rmScanCam">Foto + AI</label><label class="rm-scan-button" for="rmScanFile">Galeri + AI</label>' : '') + '</div>' +
+            (aiOcrEndpoint() ? '<input id="rmScanCam" type="file" accept="image/*" capture="environment" hidden><input id="rmScanFile" type="file" accept="image/*" multiple hidden>' : '') +
+            '<p id="rmScanStatus" class="rm-scan-status" role="status" aria-live="polite"></p></div>' +
           '<div class="rm-bulk-defaults">' +
             '<div class="rm-bulk-field"><label for="rmBulkDoctor">Dokter untuk semua pasien</label><div class="rm-bulk-control"><select id="rmBulkDoctor">' + opts(Object.keys(DOKTER), '', 'Pilih dokter') + '</select><button type="button" class="secondary" data-apply-doctor>Terapkan</button></div></div>' +
             '<div class="rm-bulk-field"><label for="rmBulkPayer">Penjamin untuk semua pasien</label><div class="rm-bulk-control"><select id="rmBulkPayer">' + opts(PENJAMIN, '', 'Pilih penjamin') + '</select><button type="button" class="secondary" data-apply-payer>Terapkan</button></div></div>' +
@@ -478,6 +484,110 @@
     row.querySelectorAll('.is-missing').forEach(function (e) { e.classList.remove('is-missing'); });
     return row;
   }
+  function finishScan(parsedList, total, secs, errMsg) {
+    var notes = [], lastRow = null, firstDate = '', anyMiss = false;
+    parsedList.forEach(function (parsed, idx) {
+      var row = fillRowFromScan(parsed); if (!row) return; lastRow = lastRow || row;
+      var miss = [['nama', parsed.nama], ['nomor WA', parsed.wa], ['jenis USG', parsed.jenis], ['dokter', parsed.dokter]]
+        .filter(function (x) { return !x[1]; }).map(function (x) { return x[0]; });
+      var who = parsed.nama || ('kertas ' + (idx + 1));
+      if (miss.length) { anyMiss = true; notes.push(who + ': periksa ' + miss.join(', ')); }
+      if (parsed.tanggal && !firstDate) firstDate = parsed.tanggal;
+      if (parsed.catatan) notes.push(who + ' — catatan kertas: ' + parsed.catatan);
+    });
+    if (firstDate) {
+      if (!$('rmDate').value) { $('rmDate').value = firstDate; updateSendState(); notes.push('Tanggal pemeriksaan diisi ' + longDate(firstDate) + ' (sesuai kertas, termasuk catatan jadwal ulang bila ada)'); }
+      else if ($('rmDate').value !== firstDate) notes.push('Tanggal di kertas ' + longDate(firstDate) + ' berbeda dengan tanggal yang sudah dipilih; tanggal tidak diubah');
+    }
+    var ok = parsedList.length, failed = total - ok;
+    var head = ok ? ok + ' dari ' + total + ' kertas terbaca' + (secs ? ' dalam ' + secs + ' dtk' : '') + '. ' : 'Scan gagal. ';
+    if (!ok && errMsg) head += errMsg + ' ';
+    else if (failed) head += failed + ' gagal dibaca. ';
+    scanStatus(head + (notes.length ? notes.join('; ') + '. ' : (ok ? 'Data utama terdeteksi. ' : '')) + (ok ? 'Periksa kembali sebelum Kirim WA + Simpan.' : 'Periksa teksnya atau isi manual.'), failed > 0 || anyMiss || !ok);
+    if (lastRow) lastRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // ===== Baca teks hasil scan bawaan HP (tanpa AI, tanpa biaya) =====
+  function editDist1(a, b) {
+    if (a === b) return true; if (Math.abs(a.length - b.length) > 1) return false;
+    var i = 0, j = 0, d = 0;
+    while (i < a.length && j < b.length) {
+      if (a[i] === b[j]) { i++; j++; continue; }
+      if (++d > 1) return false;
+      if (a.length > b.length) i++; else if (b.length > a.length) j++; else { i++; j++; }
+    }
+    return d + (a.length - i) + (b.length - j) <= 1;
+  }
+  function matchDoctorText(value) {
+    var hit = normalizeAIDoctor(value); if (hit) return hit;
+    var tokens = String(value || '').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(function (t) { return t.length >= 5; });
+    var names = Object.keys(DOKTER);
+    for (var i = 0; i < names.length; i++) {
+      var key = names[i].toLowerCase().replace(/^dr\.?\s*/, '').replace(/[^a-z]/g, '');
+      if (key.length >= 5 && tokens.some(function (t) { return editDist1(t, key); })) return names[i];
+    }
+    return '';
+  }
+  var LABEL_RE = /^(tgl\.?\s*daftar|tanggal\s*daftar|nama\s*pasien|tanggal\s*lahir|tgl\.?\s*lahir|no\.?\s*hp|no\.?\s*telp|hari|usg\s*(&|dan)|dokter\s*(radiologi|pengirim)|radiolog)/i;
+  function isoDate(d, m, y) {
+    d = +d; m = +m; y = +y; if (y < 100) y += 2000;
+    if (m < 1 || m > 12 || d < 1 || d > 31) return '';
+    var k = y + '-' + (m < 10 ? '0' : '') + m + '-' + (d < 10 ? '0' : '') + d;
+    var t = new Date(k + 'T00:00:00'); return t.getMonth() + 1 === m && t.getDate() === d ? k : '';
+  }
+  function parseOneScan(chunk) {
+    var lines = chunk.split('\n').map(function (l) { return l.replace(/\s+/g, ' ').trim(); }).filter(Boolean);
+    function after(re) {
+      for (var i = 0; i < lines.length; i++) if (re.test(lines[i])) {
+        var rest = lines[i].replace(re, '').replace(/^[\s:.\-]+/, '').replace(/^(&\s*no\.?\s*rm|pasien|pemeriksaan|radiologi|pengirim|diagnosa|lahir|hp)\s*[:.]?\s*/i, '').trim();
+        if (rest) return rest;
+        for (var j = i + 1; j < lines.length; j++) if (!LABEL_RE.test(lines[j])) return lines[j];
+      }
+      return '';
+    }
+    // nama: teks sebelum "(No. RM)"
+    var nama = '', m;
+    for (var i = 0; i < lines.length && !nama; i++) if ((m = lines[i].match(/^(.*?)\s*[(\[]\s*\d{4,8}\s*[)\]]/)) && /[a-z]{3}/i.test(m[1]) && !LABEL_RE.test(m[1])) nama = m[1];
+    if (!nama) nama = after(/nama\s*pasien(\s*&\s*no\.?\s*rm)?/i).replace(/[(\[].*$/, '').replace(/\d+/g, '');
+    nama = nama.replace(/[^A-Za-z.'\-\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    // nomor HP
+    var wa = '', hp = after(/no\.?\s*(hp|telp\w*|wa)/i), cand = hp || chunk;
+    var phoneRe = /(?:\+?62|0)\s*8[\d\s.\-]{7,16}\d/, pm = phoneRe.test(hp) ? hp.match(phoneRe) : chunk.match(phoneRe);
+    if (pm) wa = pm[0].replace(/[^\d+]/g, '');
+    if (wa && !/^(?:\+?62|0|8)\d{7,14}$/.test(wa)) wa = '';
+    // jenis USG
+    var jenis = normalizeAIExam(after(/usg\s*(&|dan)\s*diagnos\w*/i));
+    for (var q = 0; q < lines.length && !jenis; q++) if (!/^usg\s*(&|dan)/i.test(lines[q])) jenis = normalizeAIExam(lines[q]);
+    // dokter radiologi (bukan pengirim)
+    var dokter = matchDoctorText(after(/dokter\s*radiolog\w*/i));
+    if (!dokter) for (var k = 0; k < lines.length && !dokter; k++) if (!/pengirim/i.test(lines[k]) && !/pengirim/i.test(lines[k - 1] || '')) dokter = matchDoctorText(lines[k]);
+    // tanggal pemeriksaan + catatan jadwal ulang
+    var yearNow = new Date().getFullYear(), tgl = '', exam = after(/(hari\s*\/?\s*)?tgl\.?\s*pemeriksaan|hari\s*\/\s*tgl\.?\s*pemeriksaan/i);
+    var dateRe = /(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\s*[\/\-.]\s*(20\d{2})/, dm = dateRe.test(exam) ? exam.match(dateRe) : chunk.match(dateRe);
+    if (dm) tgl = isoDate(dm[1], dm[2], dm[3]);
+    var catatan = '', rs = null;
+    for (var n = 0; n < lines.length && !rs; n++) {
+      var r = lines[n].match(/\b(?:ke|jadi|pindah(?:\s*ke)?|resched\w*)\s*[:\-]?\s*(\d{1,2})\s*[\/\-.]\s*(\d{1,2})(?:\s*[\/\-.]\s*(20\d{2}|\d{2}))?\b/i);
+      if (r) { rs = r; catatan = lines[n]; }
+    }
+    if (rs) { var ry = rs[3] ? rs[3] : (tgl ? tgl.slice(0, 4) : yearNow); var nd = isoDate(rs[1], rs[2], ry); if (nd) tgl = nd; else catatan = ''; }
+    return { nama: nama, wa: wa, jenis: jenis, dokter: dokter, tanggal: tgl, catatan: catatan.replace(/[^\w\s\/.\-,]/g, '').slice(0, 140) };
+  }
+  function parseScanText(text) {
+    var raw = String(text || '').replace(/\r/g, '');
+    var parts = raw.split(/(?=radiolog\w*\s*rs\s*setia)/i).filter(function (p) { return p.trim(); });
+    if (!parts.length) parts = [raw];
+    return parts.map(parseOneScan).filter(function (r) { return r.nama || r.wa || r.jenis || r.dokter; });
+  }
+  function applyScanText() {
+    var ta = $('rmScanText'), text = ta.value;
+    if (!text.trim()) return scanStatus('Tempel atau scan teks kertas dulu pada kotak di atas.', true);
+    var list = parseScanText(text);
+    if (!list.length) return scanStatus('Belum ada data pasien yang terbaca dari teks. Pastikan teks memuat label kertas (Nama Pasien, No. HP, dst.) atau coba scan ulang lebih dekat.', true);
+    finishScan(list, list.length, 0, '');
+    ta.value = ''; // dikosongkan agar tidak terisi dobel bila tombol ditekan lagi
+  }
+
   // Beberapa foto sekaligus dibaca PARALEL, jadi 5 kertas tidak butuh 5x waktu tunggu.
   function applyScanToForm(fileList) {
     if (scanBusy) return scanStatus('Scan sebelumnya masih berjalan, tunggu sebentar.', true);
@@ -494,26 +604,9 @@
         function (err) { done++; return { ok: false, err: err }; });
     })).then(function (results) {
       clearInterval(timer); scanBusy = false;
-      var okList = results.filter(function (r) { return r.ok; }), notes = [], lastRow = null, firstDate = '';
-      okList.forEach(function (r, idx) {
-        var row = fillRowFromScan(r.parsed); if (!row) return; lastRow = lastRow || row;
-        var miss = [['nama', r.parsed.nama], ['nomor WA', r.parsed.wa], ['jenis USG', r.parsed.jenis], ['dokter', r.parsed.dokter]]
-          .filter(function (x) { return !x[1]; }).map(function (x) { return x[0]; });
-        var who = r.parsed.nama || ('foto ' + (idx + 1));
-        if (miss.length) notes.push(who + ': periksa ' + miss.join(', '));
-        if (r.parsed.tanggal && !firstDate) firstDate = r.parsed.tanggal;
-        if (r.parsed.catatan) notes.push(who + ' — catatan kertas: ' + r.parsed.catatan);
-      });
-      if (firstDate) {
-        if (!$('rmDate').value) { $('rmDate').value = firstDate; updateSendState(); notes.push('Tanggal pemeriksaan diisi ' + longDate(firstDate) + ' (sesuai kertas, termasuk catatan jadwal ulang bila ada)'); }
-        else if ($('rmDate').value !== firstDate) notes.push('Tanggal di kertas ' + longDate(firstDate) + ' berbeda dengan tanggal yang sudah dipilih; tanggal tidak diubah');
-      }
-      var failed = results.length - okList.length, secs = Math.round((Date.now() - t0) / 1000);
-      var head = okList.length ? okList.length + ' dari ' + results.length + ' foto terbaca dalam ' + secs + ' dtk. ' : 'Scan gagal. ';
-      if (!okList.length && results[0] && results[0].err) head += (results[0].err.message || '') + ' ';
-      else if (failed) head += failed + ' foto gagal dibaca. ';
-      scanStatus(head + (notes.length ? notes.join('; ') + '. ' : (okList.length ? 'Data utama terdeteksi. ' : '')) + (okList.length ? 'Periksa kembali sebelum Kirim WA + Simpan.' : 'Coba foto lebih terang, fokus, dan tidak miring; atau isi manual.'), failed > 0 || notes.length > 0);
-      if (lastRow) lastRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      var okList = results.filter(function (r) { return r.ok; });
+      var firstErr = results.filter(function (r) { return !r.ok; })[0];
+      finishScan(okList.map(function (r) { return r.parsed; }), results.length, Math.round((Date.now() - t0) / 1000), firstErr && firstErr.err ? firstErr.err.message : '');
     });
   }
 
@@ -521,7 +614,9 @@
     if (!$('reminderApp')) return;
     shell(); render();
     $('rmForm').addEventListener('submit', function (e) { e.preventDefault(); });
-    ['rmScanFile', 'rmScanCam'].forEach(function (id) { $(id).addEventListener('change', function (e) { var fl = e.target.files; if (fl && fl.length) applyScanToForm(Array.prototype.slice.call(fl)); e.target.value = ''; }); });
+    ['rmScanFile', 'rmScanCam'].forEach(function (id) { var el = $(id); if (el) el.addEventListener('change', function (e) { var fl = e.target.files; if (fl && fl.length) applyScanToForm(Array.prototype.slice.call(fl)); e.target.value = ''; }); });
+    $('rmScanParse').addEventListener('click', applyScanText);
+    $('rmScanTextClear').addEventListener('click', function () { $('rmScanText').value = ''; scanStatus('', false); });
     $('rmRows').addEventListener('click', function (e) { var b = e.target.closest('[data-row-send]'); if (b) saveOneRow(b.closest('.rm-row')); });
     $('rmForm').addEventListener('click', function (e) {
       var doctor = e.target.closest('[data-apply-doctor]');
