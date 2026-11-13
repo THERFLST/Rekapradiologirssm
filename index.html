@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f3f6f8">
   <meta name="description" content="Rekap jumlah pasien dan pemeriksaan radiologi.">
-  <title>Sistem Rekapitulasi Radiologi</title>
+  <title>SISTEM INTERNAL RADIOLOGI</title>
   <link rel="stylesheet" href="./styles.css?v=v4">
   <link rel="stylesheet" href="./modules.css?v=v3">
   <link rel="stylesheet" href="./auth.css?v=v1">
@@ -23,7 +23,6 @@
   <script src="./master.js?v=v1" defer></script>
   <script src="./service-import.js?v=v14" defer></script>
   <script>window.RM_AI_OCR_ENDPOINT = window.RM_AI_OCR_ENDPOINT || "";</script>
-  <script src="./reminder.js?v=v14" defer></script>
   <script src="./ui.js?v=v4" defer></script>
 </head>
 <body class="app-locked">
@@ -42,7 +41,7 @@
 
   <main class="shell">
     <header class="top">
-      <div><p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p><h1>Sistem Rekapitulasi Radiologi</h1><p id="activeModuleSubtitle" class="muted">Rekap Konvensional</p></div>
+      <div><p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p><h1>SISTEM INTERNAL RADIOLOGI</h1><p id="activeModuleSubtitle" class="muted">Rekap Konvensional</p></div>
       <div class="main-menu-wrap">
         <button id="mainMenuToggle" class="main-menu-toggle" type="button" aria-label="Buka menu utama" aria-expanded="false" aria-controls="mainMenu">☰</button>
         <nav id="mainMenu" class="main-menu" aria-label="Menu utama" hidden>
@@ -106,11 +105,6 @@
       <section id="serviceReportResult" class="service-report-result" aria-live="polite" hidden>
         <div id="serviceReportContent"></div>
       </section>
-    </section>
-
-    <section id="v-reminder" class="view panel module-view" hidden>
-      <div class="section-title"><div><p class="eyebrow">Reminder USG</p><h2>Reminder Pemeriksaan USG</h2><p class="muted">Pilih petugas dan tanggal pemeriksaan, lalu isi data setiap pasien. Tombol Kirim WA pada tiap baris menyimpan data dan membuka WhatsApp; isian tetap ada sampai dihapus manual. WhatsApp hanya bisa dikirim jika tanggal pemeriksaan adalah besok (H-1).</p></div></div>
-      <div id="reminderApp"></div>
     </section>
 
     <section id="v-master" class="view panel module-view" hidden>

@@ -90,13 +90,13 @@
   function renderExport(){controls($('expCtl'),S.exp,renderExport);const r=range(S.exp.mode,S.exp.ref),a=agg(r.keys);$('expInfo').textContent=`Periode ${S.exp.mode}: ${r.label} · Kunjungan ${fmt(a.v)} · Pemeriksaan ${fmt(a.n)} · Ekspose ${fmt(a.x)}`}
   function exportExcel(){if(!window.XLSX){alert('Excel belum termuat. Periksa koneksi internet.');return}
     const r=range(S.exp.mode,S.exp.ref),a=agg(r.keys);
-    const rows=[['Rekap Pasien Radiologi · RS Setia Mitra'],['Periode',`${S.exp.mode} · ${r.label}`],[],['Tanggal','Hari','Kunjungan','Pemeriksaan','Ekspose',...ORIGINS.map(x=>`Asal ${x[1]}`),...PAYERS.map(x=>`Penjamin ${x[1]}`)]];
+    const rows=[['SISTEM INTERNAL RADIOLOGI · RS Setia Mitra'],['Periode',`${S.exp.mode} · ${r.label}`],[],['Tanggal','Hari','Kunjungan','Pemeriksaan','Ekspose',...ORIGINS.map(x=>`Asal ${x[1]}`),...PAYERS.map(x=>`Penjamin ${x[1]}`)]];
     r.keys.forEach(k=>{const rec=record(k),t=total(rec);rows.push([short(k),DAYS[dateObj(k).getDay()],t.visits,t.exams,t.exposure,...ORIGINS.map(([c])=>value(rec.source[c])),...PAYERS.map(([c])=>value(rec.payer[c]))])});
     rows.push(['Total','',a.v,a.n,a.x,...ORIGINS.map(([c])=>a.o[c]),...PAYERS.map(([c])=>a.p[c])]);
     const ex=[['Jenis Pemeriksaan','Kelompok','Pasien','Ekspose'],...EXAMS.map(([k,l,g])=>[l,g,a.e[k].p,a.e[k].x]),['Grand total','',a.n,a.x]];
     const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Rekap');XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(ex),'Pemeriksaan');
     XLSX.writeFile(wb,`rekap-radiologi-${S.exp.mode}-${r.keys[0]}.xlsx`)}
-  function exportPdf(){const r=range(S.exp.mode,S.exp.ref);$('printArea').innerHTML=`<div class="rpt-head"><p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p><h1>Rekap Pasien Radiologi</h1><p class="muted">Periode ${S.exp.mode}: ${r.label}</p></div><div class="panel">${reportHTML(r.keys)}</div>`;window.print()}
+  function exportPdf(){const r=range(S.exp.mode,S.exp.ref);$('printArea').innerHTML=`<div class="rpt-head"><p class="eyebrow">Instalasi Radiologi · RS Setia Mitra</p><h1>SISTEM INTERNAL RADIOLOGI</h1><p class="muted">Periode ${S.exp.mode}: ${r.label}</p></div><div class="panel">${reportHTML(r.keys)}</div>`;window.print()}
 
   /* ---------- Navigasi ---------- */
   function show(v){if(!['isi','rekap','export'].includes(v))v='isi';S.view=v;

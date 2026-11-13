@@ -344,7 +344,7 @@ html[data-theme=dark] .login-card button,html[data-theme=dark] .primary-action{c
 .usg-exam-fields input{width:96px;min-height:40px;border-radius:10px}
 /* Tab: semua menu memakai bentuk pil yang sama dan berada di atas panel */
 .nav{margin:0 0 14px}
-#v-reminder:not([hidden]){display:flex;flex-direction:column}
+#v-reminder.on:not([hidden]){display:flex;flex-direction:column}
 #reminderApp{display:contents}
 #v-reminder .rm-tabs{order:-1}
 /* Tombol unggah file seragam dengan tombol lain */
