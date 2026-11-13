@@ -1,4 +1,4 @@
-/* reminder.js v5 — Reminder USG: tanggal pemeriksaan satu kali untuk semua pasien, jenis USG pilihan,
+/* reminder.js v6 (isi otomatis dari teks dengan kata kunci) — Reminder USG: tanggal pemeriksaan satu kali untuk semua pasien, jenis USG pilihan,
    pesan WA otomatis + persiapan per jenis USG, pasien terkirim masuk ke tab Data Pasien (per tanggal & jenis). */
 (function () {
   'use strict';
@@ -83,9 +83,9 @@
             '<p id="rmDateHint" class="hint rm-datehint" role="status" aria-live="polite"></p>' +
           '</div>' +
           '<div class="rm-scan-tools"><div><strong>Isi otomatis dari kertas pasien</strong>' +
-            '<p class="hint">Tanpa AI, tanpa biaya, langsung di HP. <b>iPhone:</b> ketuk kotak di bawah → <b>Scan Text</b> (ikon kamera) → arahkan ke kertas → <b>Insert</b>. Atau buka foto kertas → tahan tulisan → <b>Salin Semua</b> → tempel di sini. Boleh banyak kertas sekaligus.</p></div>' +
-            '<textarea id="rmScanText" class="rm-scan-text" rows="4" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Hasil scan/teks kertas muncul di sini…"></textarea>' +
-            '<div class="rm-scan-actions"><button type="button" id="rmScanParse" class="rm-scan-button rm-scan-go">Isi dari teks</button><button type="button" id="rmScanTextClear" class="rm-scan-button">Hapus teks</button>' +
+            '<p class="hint">Tanpa AI, tanpa biaya. Ketik atau tempel per baris, pakai kata kunci: <b>nama</b>, <b>no WA</b> (nomor HP), <b>usg</b> (jenis pemeriksaan), <b>dr</b> (dokter). Urutan bebas. Baris otomatis masuk kolom setelah Enter atau setelah berhenti mengetik. Tempel hasil scan kertas juga bisa.</p></div>' +
+            '<textarea id="rmScanText" class="rm-scan-text" rows="4" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Contoh: Rian Dedi 089652029669 usg abd dr. fatima"></textarea>' +
+            '<div class="rm-scan-actions">' +
             (aiOcrEndpoint() ? '<label class="rm-scan-button" for="rmScanCam">Foto + AI</label><label class="rm-scan-button" for="rmScanFile">Galeri + AI</label>' : '') + '</div>' +
             (aiOcrEndpoint() ? '<input id="rmScanCam" type="file" accept="image/*" capture="environment" hidden><input id="rmScanFile" type="file" accept="image/*" multiple hidden>' : '') +
             '<p id="rmScanStatus" class="rm-scan-status" role="status" aria-live="polite"></p></div>' +
@@ -474,7 +474,7 @@
   var scanBusy = false;
   function fillRowFromScan(parsed) {
     var row = firstAvailableRow();
-    if (!row) { addRows(1); row = firstAvailableRow(); }
+    if (!row) { var vals = readRows(); vals.push({}); renderRows(vals); updateSendState(); row = firstAvailableRow(); }
     if (!row) return null;
     if (parsed.nama) row.querySelector('.rn').value = parsed.nama;
     if (parsed.wa) row.querySelector('.rw').value = parsed.wa;
@@ -484,7 +484,7 @@
     row.querySelectorAll('.is-missing').forEach(function (e) { e.classList.remove('is-missing'); });
     return row;
   }
-  function finishScan(parsedList, total, secs, errMsg) {
+  function finishScan(parsedList, total, secs, errMsg, noScroll) {
     var notes = [], lastRow = null, firstDate = '', anyMiss = false;
     parsedList.forEach(function (parsed, idx) {
       var row = fillRowFromScan(parsed); if (!row) return; lastRow = lastRow || row;
@@ -504,7 +504,7 @@
     if (!ok && errMsg) head += errMsg + ' ';
     else if (failed) head += failed + ' gagal dibaca. ';
     scanStatus(head + (notes.length ? notes.join('; ') + '. ' : (ok ? 'Data utama terdeteksi. ' : '')) + (ok ? 'Periksa kembali sebelum Kirim WA + Simpan.' : 'Periksa teksnya atau isi manual.'), failed > 0 || anyMiss || !ok);
-    if (lastRow) lastRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (lastRow && !noScroll) lastRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   // ===== Baca teks hasil scan bawaan HP (tanpa AI, tanpa biaya) =====
@@ -579,13 +579,66 @@
     if (!parts.length) parts = [raw];
     return parts.map(parseOneScan).filter(function (r) { return r.nama || r.wa || r.jenis || r.dokter; });
   }
-  function applyScanText() {
-    var ta = $('rmScanText'), text = ta.value;
-    if (!text.trim()) return scanStatus('Tempel atau scan teks kertas dulu pada kotak di atas.', true);
-    var list = parseScanText(text);
-    if (!list.length) return scanStatus('Belum ada data pasien yang terbaca dari teks. Pastikan teks memuat label kertas (Nama Pasien, No. HP, dst.) atau coba scan ulang lebih dekat.', true);
-    finishScan(list, list.length, 0, '');
-    ta.value = ''; // dikosongkan agar tidak terisi dobel bila tombol ditekan lagi
+  // ===== Isi otomatis dari teks: per baris, memakai kata kunci (urutan bebas) =====
+  var SCAN_PHONE_RE = /(?:\b(?:no\.?\s*)?(?:wa|hp|telp|whatsapp)\s*[:=\-]?\s*)?((?:\+?62|0)\s*8[\d\s.\-]{7,16}\d)/i;
+  var SCAN_DOKTER_RE = /\b(?:dr\.\s*|dr\s+|dokter\s+(?:radiolog\w*\s+)?)([a-z][a-z.]{1,20})(?=\s|$)/i;
+  var SCAN_JENIS_RE = /\b(?:usg|jenis(?:\s+pemeriksaan)?|pemeriksaan)\b\s*[:=\-]?\s*(.*?)(?=\s+(?:dr|dokter|nama|wa|hp|no|telp)\b|\s*$)/i;
+  function extractScanEntry(line) {
+    var s = ' ' + String(line || '').replace(/\s+/g, ' ').trim() + ' ', rec = { nama: '', wa: '', jenis: '', dokter: '' }, m;
+    if ((m = s.match(SCAN_PHONE_RE))) { rec.wa = m[1].replace(/[^\d+]/g, ''); s = s.replace(m[0], ' '); }
+    if ((m = s.match(SCAN_DOKTER_RE))) { rec.dokter = matchDoctorText(m[1]); s = s.replace(m[0], ' '); }
+    if ((m = s.match(SCAN_JENIS_RE))) {
+      var words = m[1].split(' ').filter(Boolean), found = 0;
+      while (words.length && /^(usg|pemeriksaan)$/i.test(words[0])) words.shift();
+      for (var n = 1; n <= Math.min(3, words.length) && !rec.jenis; n++) {
+        rec.jenis = normalizeAIExam(words.slice(0, n).join(' '));
+        if (rec.jenis) found = n;
+      }
+      while (rec.jenis && found < words.length && /^(full|lengkap)$/i.test(words[found])) found++;
+      if (!rec.jenis) found = words.length;
+      s = s.replace(m[0], ' ' + words.slice(found).join(' ') + ' ');
+    }
+    var nm = s.replace(/\b(nama(\s+pasien)?|pasien|no|wa|hp|telp|whatsapp|jenis|pemeriksaan|usg|dr|dokter|radiolog\w*)\b\.?/gi, ' ')
+      .replace(/[^A-Za-z.'\-\s]/g, ' ').replace(/\s+/g, ' ').replace(/^[.\-\s]+|[.\-\s]+$/g, '');
+    rec.nama = /[a-z]{2}/i.test(nm) ? nm : '';
+    return rec;
+  }
+  function isCompleteScanEntry(line) {
+    var r = extractScanEntry(line);
+    return !!(r.nama && r.wa && r.jenis && r.dokter);
+  }
+  function isPaperScan(text) { return /radiolog\w*\s*rs\s*setia|no\.?\s*rm\b/i.test(text); }
+  // mode: 'lines' = baris yang sudah di-Enter; 'idle' = juga baris terakhir bila sudah lengkap; 'all' = semua
+  function consumeScanText(mode) {
+    var ta = $('rmScanText'); if (!ta || !ta.value.trim()) return;
+    if (mode !== 'all' && isPaperScan(ta.value)) return;
+    var lines = ta.value.split('\n'), pending = lines.pop(), list = [], rest = [];
+    if (mode === 'all' || (mode === 'idle' && pending.trim() && isCompleteScanEntry(pending))) { lines.push(pending); pending = ''; }
+    lines.forEach(function (l) {
+      if (!l.trim()) return;
+      var r = extractScanEntry(l);
+      if (r.nama || r.wa || r.jenis || r.dokter) list.push(r); else rest.push(l);
+    });
+    if (pending.trim()) rest.push(pending);
+    if (!list.length) return;
+    ta.value = rest.join('\n');
+    finishScan(list, list.length, 0, '', true);
+  }
+  function applyScanAll() {
+    var ta = $('rmScanText'); if (!ta || !ta.value.trim()) return;
+    if (isPaperScan(ta.value)) {
+      var plist = parseScanText(ta.value);
+      if (plist.length) { ta.value = ''; finishScan(plist, plist.length, 0, ''); return; }
+    }
+    var before = ta.value;
+    consumeScanText('all');
+    if (ta.value === before) scanStatus('Belum ada data yang terbaca. Tulis per baris, misalnya: Rian Dedi 089652029669 usg abd dr. fatima', true);
+  }
+  var scanIdleTimer = null;
+  function onScanInput() {
+    consumeScanText('lines');
+    clearTimeout(scanIdleTimer);
+    scanIdleTimer = setTimeout(function () { consumeScanText('idle'); }, 1200);
   }
 
   // Beberapa foto sekaligus dibaca PARALEL, jadi 5 kertas tidak butuh 5x waktu tunggu.
@@ -615,8 +668,9 @@
     shell(); render();
     $('rmForm').addEventListener('submit', function (e) { e.preventDefault(); });
     ['rmScanFile', 'rmScanCam'].forEach(function (id) { var el = $(id); if (el) el.addEventListener('change', function (e) { var fl = e.target.files; if (fl && fl.length) applyScanToForm(Array.prototype.slice.call(fl)); e.target.value = ''; }); });
-    $('rmScanParse').addEventListener('click', applyScanText);
-    $('rmScanTextClear').addEventListener('click', function () { $('rmScanText').value = ''; scanStatus('', false); });
+    $('rmScanText').addEventListener('input', onScanInput);
+    $('rmScanText').addEventListener('paste', function () { setTimeout(applyScanAll, 0); });
+    $('rmScanText').addEventListener('blur', applyScanAll);
     $('rmRows').addEventListener('click', function (e) { var b = e.target.closest('[data-row-send]'); if (b) saveOneRow(b.closest('.rm-row')); });
     $('rmForm').addEventListener('click', function (e) {
       var doctor = e.target.closest('[data-apply-doctor]');
