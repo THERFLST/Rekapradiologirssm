@@ -383,3 +383,6 @@ input[type=file]::file-selector-button:hover{background:color-mix(in srgb,var(--
 #v-reminder .rm-scan-tools .rm-scan-text{flex:none}
 #v-reminder .rm-scan-actions{flex:none;height:auto;align-items:flex-start}
 #v-reminder .rm-scan-actions .rm-scan-button{flex:1 1 42%;height:46px;min-height:46px;max-height:46px}
+
+.rm-row-send .rm-sep{opacity:.55;margin:0 6px}
+.rm-row-send .rm-save-ico{vertical-align:-3px}

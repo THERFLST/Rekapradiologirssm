@@ -76,7 +76,7 @@
         '<div id="rmBanner" class="rm-banner" role="status" aria-live="polite"></div>' +
         '<div id="rmQueue" class="rm-queue" hidden></div>' +
         '<form id="rmForm" class="rm-batch" autocomplete="off">' +
-          '<div class="rm-batchhead"><h3>Input pasien</h3></div>' +
+          '<div class="rm-batchhead"><h3>Input pasien</h3>' + '<button type=\"button\" id=\"rmClearAll\" class=\"danger\">Kosongkan semua isi</button>' + '</div>' +
           '<div class="rm-shared">' +
             '<label>Petugas<select id="rmPetugas">' + opts(PETUGAS, lastPetugas, 'Pilih petugas') + '</select></label>' +
             '<label>Tanggal pemeriksaan (semua pasien)<input id="rmDate" type="date" min="' + todayKey() + '"></label>' +
@@ -96,8 +96,8 @@
           '<p class="hint rm-bulk-hint">Pilih dokter atau penjamin, lalu tekan Terapkan. Pilihan akan mengisi seluruh baris dan tetap bisa diubah satu per satu.</p>' +
           '<div class="rm-rowshead"><span>#</span><span>Nama pasien</span><span>No. WhatsApp</span><span>Jenis pemeriksaan</span><span>Dokter</span><span>Penjamin</span><span></span></div>' +
           '<div id="rmRows" class="rm-rows"></div>' +
-          '<div class="rm-batchfoot"><button type="button" id="rmAdd" class="secondary">+ Tambah baris</button><button type="button" id="rmAdd5" class="secondary">+ 5 baris</button><button type="button" id="rmClearAll" class="danger">Kosongkan semua isi</button></div>' +
-          '<p class="hint rm-row-hint">Tekan <b>Kirim WA + Simpan</b> pada baris pasien yang ingin diproses. Data disimpan satu per satu sebelum WhatsApp dibuka.</p>' +
+          '<div class="rm-batchfoot"><button type="button" id="rmAdd" class="secondary">+ Tambah baris</button><button type="button" id="rmAdd5" class="secondary">+ 5 baris</button></div>' +
+          '<p class="hint rm-row-hint">Tekan <b>Kirim WA</b> pada baris pasien yang ingin diproses. Data disimpan satu per satu sebelum WhatsApp dibuka.</p>' +
         '</form>' +
         '<p id="rmMsg" class="muted rm-msg" role="status" aria-live="polite"></p>' +
         '<details class="rm-tpl"><summary>Persiapan &amp; alur pendaftaran dalam pesan</summary>' +
@@ -148,7 +148,7 @@
     return '<article class="rm-item' + (can ? ' is-due' : '') + '">' +
       '<div class="rm-main"><strong>' + esc(p.nama) + '</strong><span>+' + esc(p.wa) + ' · ' + esc(p.jenis || 'Jenis belum dipilih') + '</span><small>Periksa: ' + esc(longDate(p.tanggal)) + (p.jam || DOKTER[p.dokter] ? ' · ' + esc(p.jam || DOKTER[p.dokter]) + ' WIB' : '') + (p.dokter ? ' · ' + esc(p.dokter) : '') + (p.penjamin ? ' · ' + esc(p.penjamin) : '') + '</small></div>' +
       '<div class="rm-side">' + chip + '<div class="rm-actions">' +
-        '<button type="button" class="primary-action" data-act="send" data-id="' + esc(p.id) + '"' + tip + '>Kirim WA + Simpan</button>' +
+        '<button type="button" class="primary-action" data-act="send" data-id="' + esc(p.id) + '"' + tip + '>' + BTN_KIRIM + '</button>' +
         '<button type="button" class="danger" data-act="del" data-id="' + esc(p.id) + '">Hapus</button>' +
       '</div></div></article>';
   }
@@ -184,6 +184,8 @@
   function say(text, bad) { var m = $('rmMsg'); m.textContent = text; m.classList.toggle('bad', !!bad); }
 
   var MINROWS = 1, STARTROWS = 10;
+  var SAVE_ICON = '<svg class="rm-save-ico" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>';
+  var BTN_KIRIM = 'Kirim WA <span class="rm-sep" aria-hidden="true">|</span>' + SAVE_ICON;
   function rowHTML(i, v) {
     var n = i + 1;
     return '<div class="rm-row' + (v.bad ? ' is-bad' : '') + (v.pid ? ' is-sent' : '') + '"' + (v.pid ? ' data-pid="' + esc(v.pid) + '"' : '') + '><span class="rm-no">' + n + '</span>' +
@@ -193,7 +195,7 @@
       '<select class="rd" aria-label="Dokter baris ' + n + '">' + opts(Object.keys(DOKTER), v.d || '', 'Dokter') + '</select>' +
       '<select class="rp" aria-label="Penjamin baris ' + n + '">' + opts(PENJAMIN, v.p || '', 'Penjamin') + '</select>' +
       '<button type="button" class="rm-x" data-rm aria-label="Hapus baris ' + n + '">\u00d7</button>' +
-      '<button type="button" class="primary-action rm-row-send" data-row-send>Kirim WA + Simpan</button></div>';
+      '<button type="button" class="primary-action rm-row-send" data-row-send aria-label="Kirim WA dan simpan">' + BTN_KIRIM + '</button></div>';
   }
   function renderRows(vals) {
     var list = vals.slice(); while (list.length < MINROWS) list.push({});
@@ -503,7 +505,7 @@
     var head = ok ? ok + ' dari ' + total + ' kertas terbaca' + (secs ? ' dalam ' + secs + ' dtk' : '') + '. ' : 'Scan gagal. ';
     if (!ok && errMsg) head += errMsg + ' ';
     else if (failed) head += failed + ' gagal dibaca. ';
-    scanStatus(head + (notes.length ? notes.join('; ') + '. ' : (ok ? 'Data utama terdeteksi. ' : '')) + (ok ? 'Periksa kembali sebelum Kirim WA + Simpan.' : 'Periksa teksnya atau isi manual.'), failed > 0 || anyMiss || !ok);
+    scanStatus(head + (notes.length ? notes.join('; ') + '. ' : (ok ? 'Data utama terdeteksi. ' : '')) + (ok ? 'Periksa kembali sebelum Kirim WA.' : 'Periksa teksnya atau isi manual.'), failed > 0 || anyMiss || !ok);
     if (lastRow && !noScroll) lastRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
@@ -583,6 +585,8 @@
   var SCAN_PHONE_RE = /(?:\b(?:no\.?\s*)?(?:wa|hp|telp|whatsapp)\s*[:=\-]?\s*)?((?:\+?62|0)\s*8[\d\s.\-]{7,16}\d)/i;
   var SCAN_DOKTER_RE = /\b(?:dr\.\s*|dr\s+|dokter\s+(?:radiolog\w*\s+)?)([a-z][a-z.]{1,20})(?=\s|$)/i;
   var SCAN_JENIS_RE = /\b(?:usg|jenis(?:\s+pemeriksaan)?|pemeriksaan)\b\s*[:=\-]?\s*(.*?)(?=\s+(?:dr|dokter|nama|wa|hp|no|telp)\b|\s*$)/i;
+  var SCAN_START = /^(abd|abdomen|abdominal|partial|uro|mammae|mamae|mamma|mam|payudara|breast|jaringan|colli|coli|leher|tiroid|thyroid|doppler|testis|skrotum|scrotum|vaskular|vascular|lunak|soft)$/i;
+  var SCAN_EXTRA = /^(full|lengkap|vaskular|vascular|testis|lunak|tissue|leher|uro|partial|doppler)$/i;
   function extractScanEntry(line) {
     var s = ' ' + String(line || '').replace(/\s+/g, ' ').trim() + ' ', rec = { nama: '', wa: '', jenis: '', dokter: '' }, m;
     if ((m = s.match(SCAN_PHONE_RE))) { rec.wa = m[1].replace(/[^\d+]/g, ''); s = s.replace(m[0], ' '); }
@@ -597,6 +601,18 @@
       while (rec.jenis && found < words.length && /^(full|lengkap)$/i.test(words[found])) found++;
       if (!rec.jenis) found = words.length;
       s = s.replace(m[0], ' ' + words.slice(found).join(' ') + ' ');
+    }
+    if (!rec.jenis) {
+      var ws = s.trim().split(/\s+/);
+      for (var i = 0; i < ws.length && !rec.jenis; i++) {
+        if (!SCAN_START.test(ws[i])) continue;
+        for (var q = Math.min(3, ws.length - i); q >= 1 && !rec.jenis; q--) {
+          var seg = ws.slice(i, i + q);
+          if (!seg.slice(1).every(function (w) { return SCAN_EXTRA.test(w); })) continue;
+          rec.jenis = normalizeAIExam(seg.join(' '));
+          if (rec.jenis) { ws.splice(i, q); s = ' ' + ws.join(' ') + ' '; }
+        }
+      }
     }
     var nm = s.replace(/\b(nama(\s+pasien)?|pasien|no|wa|hp|telp|whatsapp|jenis|pemeriksaan|usg|dr|dokter|radiolog\w*)\b\.?/gi, ' ')
       .replace(/[^A-Za-z.'\-\s]/g, ' ').replace(/\s+/g, ' ').replace(/^[.\-\s]+|[.\-\s]+$/g, '');
