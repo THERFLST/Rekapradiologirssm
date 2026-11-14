@@ -83,8 +83,8 @@
             '<p id="rmDateHint" class="hint rm-datehint" role="status" aria-live="polite"></p>' +
           '</div>' +
           '<div class="rm-scan-tools"><div><strong>Isi otomatis dari kertas pasien</strong>' +
-            '<p class="hint">Tanpa AI, tanpa biaya. Ketik atau tempel per baris, pakai kata kunci: <b>nama</b>, <b>no WA</b> (nomor HP), <b>usg</b> (jenis pemeriksaan), <b>dr</b> (dokter). Urutan bebas. Baris otomatis masuk kolom setelah Enter atau setelah berhenti mengetik. Tempel hasil scan kertas juga bisa.</p></div>' +
-            '<textarea id="rmScanText" class="rm-scan-text" rows="4" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Contoh: Rian Dedi 089652029669 usg abd dr. fatima"></textarea>' +
+            '</div>' +
+            '<textarea id="rmScanText" class="rm-scan-text" rows="4" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>' +
             '<div class="rm-scan-actions"><button type="button" id="rmScanFill" class="rm-scan-button rm-scan-go">Isi kolom</button>' +
             (aiOcrEndpoint() ? '<label class="rm-scan-button" for="rmScanCam">Foto + AI</label><label class="rm-scan-button" for="rmScanFile">Galeri + AI</label>' : '') + '</div>' +
             (aiOcrEndpoint() ? '<input id="rmScanCam" type="file" accept="image/*" capture="environment" hidden><input id="rmScanFile" type="file" accept="image/*" multiple hidden>' : '') +
@@ -588,10 +588,70 @@
   var SCAN_JENIS_RE = /\b(?:usg|jenis(?:\s+pemeriksaan)?|pemeriksaan)\b\s*[:=\-]?\s*(.*?)(?=\s+(?:dr|dokter|nama|wa|hp|no|telp)\b|\s*$)/i;
   var SCAN_START = /^(abd|abdomen|abdominal|partial|uro|mammae|mamae|mamma|mam|payudara|breast|jaringan|colli|coli|leher|tiroid|thyroid|doppler|testis|skrotum|scrotum|vaskular|vascular|lunak|soft)$/i;
   var SCAN_EXTRA = /^(full|lengkap|vaskular|vascular|testis|lunak|tissue|leher|uro|partial|doppler)$/i;
+  function osaDist(a, b) {
+    var d = [], i, j;
+    for (i = 0; i <= a.length; i++) d[i] = [i];
+    for (j = 0; j <= b.length; j++) d[0][j] = j;
+    for (i = 1; i <= a.length; i++) for (j = 1; j <= b.length; j++) {
+      var c = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+    }
+    return d[a.length][b.length];
+  }
+  // kata pendek harus persis; kata panjang boleh 1 huruf salah (sampai 5 huruf) atau 2 huruf salah (6 huruf ke atas)
+  function fuzzyWord(t, list) {
+    if (t.length < 4) return list.indexOf(t) >= 0 ? t : '';
+    var best = '', bd = 99;
+    list.forEach(function (c) {
+      if (Math.abs(c.length - t.length) > 2) return;
+      var d = osaDist(t, c), lim = c.length <= 5 ? 1 : 2;
+      if (d <= lim && d < bd) { bd = d; best = c; }
+    });
+    return best;
+  }
+  // pilih kecocokan terdekat dari semua daftar; jika seri, kata kunci didahulukan
+  function fuzzyBest(t) {
+    var lists = [FUZZY_KEYWORD, FUZZY_EXAM, FUZZY_PAYER], best = '', bd = 99;
+    if (t.length < 4) return fuzzyWord(t, FUZZY_KEYWORD) || fuzzyWord(t, FUZZY_PAYER) || fuzzyWord(t, FUZZY_EXAM);
+    lists.forEach(function (list) {
+      list.forEach(function (c) {
+        if (Math.abs(c.length - t.length) > 2) return;
+        var d = osaDist(t, c), lim = c.length <= 5 ? 1 : 2;
+        if (d <= lim && d < bd) { bd = d; best = c; }
+      });
+    });
+    return best;
+  }
+  var FUZZY_ALIAS = { drr: 'dr', dkr: 'dr', dor: 'dr', uzg: 'usg', ysg: 'usg', uds: 'usg', wha: 'wa' };
+  var FUZZY_KEYWORD = ['usg', 'jenis', 'pemeriksaan', 'dokter', 'penjamin', 'pasien', 'radiologi', 'whatsapp', 'telp', 'dr', 'wa', 'hp', 'no'];
+  var FUZZY_PAYER = ['bpjs', 'asuransi', 'umum'];
+  var FUZZY_EXAM = ['abdomen', 'abdominal', 'partial', 'mammae', 'mamae', 'payudara', 'breast', 'jaringan', 'colli', 'leher', 'tiroid', 'thyroid', 'doppler', 'testis', 'skrotum', 'scrotum', 'vaskular', 'vascular', 'lunak', 'uro', 'abd', 'mamma', 'coli', 'mam'];
+  // rapikan typo sebelum dibaca: setiap kata dicocokkan ke kata kunci, jenis, atau penjamin yang paling mirip
+  function fuzzyLine(line) {
+    return String(line || '').split(/(\s+)/).map(function (tok) {
+      var core = tok.toLowerCase().replace(/[^a-z]/g, '');
+      if (!core || /\d/.test(tok)) return tok;
+      var hit = FUZZY_ALIAS[core] || fuzzyBest(core);
+      if (!hit || hit === core) return tok;
+      return hit + (/\.$/.test(tok) ? '.' : '');
+    }).join('');
+  }
+  function fuzzyDoctor(value) {
+    var t = String(value || '').toLowerCase().replace(/[^a-z\s]/g, ' ').trim().split(/\s+/)[0] || '';
+    if (t.length < 4) return '';
+    var names = Object.keys(DOKTER);
+    for (var i = 0; i < names.length; i++) {
+      var key = names[i].toLowerCase().replace(/^dr\.?\s*/, '').replace(/[^a-z]/g, '');
+      if (osaDist(t, key) <= (key.length <= 4 ? 1 : 2)) return names[i];
+    }
+    return '';
+  }
   function extractScanEntry(line) {
+    line = fuzzyLine(line);
     var s = ' ' + String(line || '').replace(/\s+/g, ' ').trim() + ' ', rec = { nama: '', wa: '', jenis: '', dokter: '', penjamin: '' }, m;
     if ((m = s.match(SCAN_PHONE_RE))) { rec.wa = m[1].replace(/[^\d+]/g, ''); s = s.replace(m[0], ' '); }
-    if ((m = s.match(SCAN_DOKTER_RE))) { rec.dokter = matchDoctorText(m[1]); s = s.replace(m[0], ' '); }
+    if ((m = s.match(SCAN_DOKTER_RE))) { rec.dokter = matchDoctorText(m[1]) || fuzzyDoctor(m[1]); s = s.replace(m[0], ' '); }
     if ((m = s.match(SCAN_JENIS_RE))) {
       var words = m[1].split(' ').filter(Boolean), found = 0;
       while (words.length && /^(usg|pemeriksaan)$/i.test(words[0])) words.shift();
