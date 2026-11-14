@@ -689,9 +689,6 @@
     shell(); render();
     $('rmForm').addEventListener('submit', function (e) { e.preventDefault(); });
     ['rmScanFile', 'rmScanCam'].forEach(function (id) { var el = $(id); if (el) el.addEventListener('change', function (e) { var fl = e.target.files; if (fl && fl.length) applyScanToForm(Array.prototype.slice.call(fl)); e.target.value = ''; }); });
-    $('rmScanText').addEventListener('input', onScanInput);
-    $('rmScanText').addEventListener('paste', function () { setTimeout(applyScanAll, 0); });
-    $('rmScanText').addEventListener('blur', applyScanAll);
     $('rmScanFill').addEventListener('click', applyScanAll);
     $('rmRows').addEventListener('click', function (e) { var b = e.target.closest('[data-row-send]'); if (b) saveOneRow(b.closest('.rm-row')); });
     $('rmForm').addEventListener('click', function (e) {
