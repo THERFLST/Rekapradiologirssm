@@ -85,7 +85,7 @@
           '<div class="rm-scan-tools"><div><strong>Isi otomatis dari kertas pasien</strong>' +
             '<p class="hint">Tanpa AI, tanpa biaya. Ketik atau tempel per baris, pakai kata kunci: <b>nama</b>, <b>no WA</b> (nomor HP), <b>usg</b> (jenis pemeriksaan), <b>dr</b> (dokter). Urutan bebas. Baris otomatis masuk kolom setelah Enter atau setelah berhenti mengetik. Tempel hasil scan kertas juga bisa.</p></div>' +
             '<textarea id="rmScanText" class="rm-scan-text" rows="4" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Contoh: Rian Dedi 089652029669 usg abd dr. fatima"></textarea>' +
-            '<div class="rm-scan-actions">' +
+            '<div class="rm-scan-actions"><button type="button" id="rmScanFill" class="rm-scan-button rm-scan-go">Isi kolom</button>' +
             (aiOcrEndpoint() ? '<label class="rm-scan-button" for="rmScanCam">Foto + AI</label><label class="rm-scan-button" for="rmScanFile">Galeri + AI</label>' : '') + '</div>' +
             (aiOcrEndpoint() ? '<input id="rmScanCam" type="file" accept="image/*" capture="environment" hidden><input id="rmScanFile" type="file" accept="image/*" multiple hidden>' : '') +
             '<p id="rmScanStatus" class="rm-scan-status" role="status" aria-live="polite"></p></div>' +
@@ -482,6 +482,7 @@
     if (parsed.wa) row.querySelector('.rw').value = parsed.wa;
     if (parsed.jenis) row.querySelector('.rj').value = parsed.jenis;
     if (parsed.dokter) row.querySelector('.rd').value = parsed.dokter;
+    if (parsed.penjamin) row.querySelector('.rp').value = parsed.penjamin;
     row.classList.remove('is-bad');
     row.querySelectorAll('.is-missing').forEach(function (e) { e.classList.remove('is-missing'); });
     return row;
@@ -490,7 +491,7 @@
     var notes = [], lastRow = null, firstDate = '', anyMiss = false;
     parsedList.forEach(function (parsed, idx) {
       var row = fillRowFromScan(parsed); if (!row) return; lastRow = lastRow || row;
-      var miss = [['nama', parsed.nama], ['nomor WA', parsed.wa], ['jenis USG', parsed.jenis], ['dokter', parsed.dokter]]
+      var miss = [['nama', parsed.nama], ['nomor WA', parsed.wa], ['jenis USG', parsed.jenis], ['dokter', parsed.dokter], ['penjamin', parsed.penjamin]]
         .filter(function (x) { return !x[1]; }).map(function (x) { return x[0]; });
       var who = parsed.nama || ('kertas ' + (idx + 1));
       if (miss.length) { anyMiss = true; notes.push(who + ': periksa ' + miss.join(', ')); }
@@ -588,7 +589,7 @@
   var SCAN_START = /^(abd|abdomen|abdominal|partial|uro|mammae|mamae|mamma|mam|payudara|breast|jaringan|colli|coli|leher|tiroid|thyroid|doppler|testis|skrotum|scrotum|vaskular|vascular|lunak|soft)$/i;
   var SCAN_EXTRA = /^(full|lengkap|vaskular|vascular|testis|lunak|tissue|leher|uro|partial|doppler)$/i;
   function extractScanEntry(line) {
-    var s = ' ' + String(line || '').replace(/\s+/g, ' ').trim() + ' ', rec = { nama: '', wa: '', jenis: '', dokter: '' }, m;
+    var s = ' ' + String(line || '').replace(/\s+/g, ' ').trim() + ' ', rec = { nama: '', wa: '', jenis: '', dokter: '', penjamin: '' }, m;
     if ((m = s.match(SCAN_PHONE_RE))) { rec.wa = m[1].replace(/[^\d+]/g, ''); s = s.replace(m[0], ' '); }
     if ((m = s.match(SCAN_DOKTER_RE))) { rec.dokter = matchDoctorText(m[1]); s = s.replace(m[0], ' '); }
     if ((m = s.match(SCAN_JENIS_RE))) {
@@ -614,7 +615,11 @@
         }
       }
     }
-    var nm = s.replace(/\b(nama(\s+pasien)?|pasien|no|wa|hp|telp|whatsapp|jenis|pemeriksaan|usg|dr|dokter|radiolog\w*)\b\.?/gi, ' ')
+    if ((m = s.match(/\b(?:penjamin\s*[:=\-]?\s*)?(bpjs|asuransi|umum)\b/i))) {
+      rec.penjamin = PENJAMIN.filter(function (p) { return p.toLowerCase() === m[1].toLowerCase(); })[0] || '';
+      s = s.replace(m[0], ' ');
+    }
+    var nm = s.replace(/\b(nama(\s+pasien)?|pasien|penjamin|no|wa|hp|telp|whatsapp|jenis|pemeriksaan|usg|dr|dokter|radiolog\w*)\b\.?/gi, ' ')
       .replace(/[^A-Za-z.'\-\s]/g, ' ').replace(/\s+/g, ' ').replace(/^[.\-\s]+|[.\-\s]+$/g, '');
     rec.nama = /[a-z]{2}/i.test(nm) ? nm : '';
     return rec;
@@ -633,7 +638,7 @@
     lines.forEach(function (l) {
       if (!l.trim()) return;
       var r = extractScanEntry(l);
-      if (r.nama || r.wa || r.jenis || r.dokter) list.push(r); else rest.push(l);
+      if (r.nama || r.wa || r.jenis || r.dokter || r.penjamin) list.push(r); else rest.push(l);
     });
     if (pending.trim()) rest.push(pending);
     if (!list.length) return;
@@ -687,6 +692,7 @@
     $('rmScanText').addEventListener('input', onScanInput);
     $('rmScanText').addEventListener('paste', function () { setTimeout(applyScanAll, 0); });
     $('rmScanText').addEventListener('blur', applyScanAll);
+    $('rmScanFill').addEventListener('click', applyScanAll);
     $('rmRows').addEventListener('click', function (e) { var b = e.target.closest('[data-row-send]'); if (b) saveOneRow(b.closest('.rm-row')); });
     $('rmForm').addEventListener('click', function (e) {
       var doctor = e.target.closest('[data-apply-doctor]');
