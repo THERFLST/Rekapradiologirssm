@@ -185,6 +185,10 @@
   var MINROWS = 1, STARTROWS = 10;
   var SAVE_ICON = '<svg class="rm-save-ico" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>';
   var BTN_KIRIM = 'Kirim WA <span class="rm-sep" aria-hidden="true">|</span>' + SAVE_ICON;
+  // huruf pertama tiap kata kapital: "rafli SEPTIANTO" -> "Rafli Septianto"
+  function titleName(v) {
+    return String(v || '').replace(/\s+/g, ' ').trim().toLowerCase().replace(/(^|[\s\-'.])([a-z\u00e0-\u024f])/g, function (m, p, c) { return p + c.toUpperCase(); });
+  }
   function rowHTML(i, v) {
     var n = i + 1;
     return '<div class="rm-row' + (v.bad ? ' is-bad' : '') + (v.pid ? ' is-sent' : '') + '"' + (v.pid ? ' data-pid="' + esc(v.pid) + '"' : '') + '><span class="rm-no">' + n + '</span>' +
@@ -193,8 +197,8 @@
       '<select class="rj" aria-label="Jenis pemeriksaan baris ' + n + '">' + opts(JENIS, v.j || '', '') + '</select>' +
       '<select class="rd" aria-label="Dokter baris ' + n + '">' + opts(Object.keys(DOKTER), v.d || '', '') + '</select>' +
       '<select class="rp" aria-label="Penjamin baris ' + n + '">' + opts(PENJAMIN, v.p || '', '') + '</select>' +
-      '<button type="button" class="rm-x" data-rm aria-label="Hapus baris ' + n + '">\u00d7</button>' +
-      '<button type="button" class="primary-action rm-row-send" data-row-send aria-label="Kirim WA dan simpan">' + BTN_KIRIM + '</button></div>';
+      '<button type="button" class="primary-action rm-row-send" data-row-send aria-label="Kirim WA dan simpan">' + BTN_KIRIM + '</button>' +
+      '<button type="button" class="rm-x" data-rm aria-label="Hapus baris ' + n + '">\u00d7</button></div>';
   }
   function renderRows(vals) {
     var list = vals.slice(); while (list.length < MINROWS) list.push({});
@@ -692,7 +696,7 @@
     }
     var nm = s.replace(/\b(nama(\s+pasien)?|pasien|penjamin|no|wa|hp|telp|whatsapp|jenis|pemeriksaan|usg|dr|dokter|radiolog\w*)\b\.?/gi, ' ')
       .replace(/[^A-Za-z.'\-\s]/g, ' ').replace(/\s+/g, ' ').replace(/^[.\-\s]+|[.\-\s]+$/g, '');
-    rec.nama = /[a-z]{2}/i.test(nm) ? nm : '';
+    rec.nama = /[a-z]{2}/i.test(nm) ? titleName(nm) : '';
     return rec;
   }
   function isCompleteScanEntry(line) {
@@ -766,6 +770,7 @@
       this.setAttribute('aria-expanded', String(!box.hidden));
       if (!box.hidden) $('rmScanText').focus();
     });
+    $('rmRows').addEventListener('change', function (e) { if (e.target.classList && e.target.classList.contains('rn')) e.target.value = titleName(e.target.value); });
     $('rmRows').addEventListener('input', updateSendState);
     $('rmRows').addEventListener('change', updateSendState);
     $('rmRows').addEventListener('click', function (e) { var b = e.target.closest('[data-row-send]'); if (b) saveOneRow(b.closest('.rm-row')); });
