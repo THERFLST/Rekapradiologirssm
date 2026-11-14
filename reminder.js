@@ -82,18 +82,17 @@
             '<label>Tanggal pemeriksaan (semua pasien)<input id="rmDate" type="date" min="' + todayKey() + '"></label>' +
             '<p id="rmDateHint" class="hint rm-datehint" role="status" aria-live="polite"></p>' +
           '</div>' +
-          '<div class="rm-scan-tools"><div><strong>Isi otomatis dari kertas pasien</strong>' +
-            '</div>' +
+          '<div class="rm-scan-tools"><button type="button" id="rmScanToggle" class="secondary rm-scan-toggle" aria-expanded="false">Isi sekaligus</button>' +
+            '<div id="rmScanBox" class="rm-scan-box" hidden>' +
             '<textarea id="rmScanText" class="rm-scan-text" rows="4" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>' +
             '<div class="rm-scan-actions"><button type="button" id="rmScanFill" class="rm-scan-button rm-scan-go">Isi kolom</button>' +
             (aiOcrEndpoint() ? '<label class="rm-scan-button" for="rmScanCam">Foto + AI</label><label class="rm-scan-button" for="rmScanFile">Galeri + AI</label>' : '') + '</div>' +
             (aiOcrEndpoint() ? '<input id="rmScanCam" type="file" accept="image/*" capture="environment" hidden><input id="rmScanFile" type="file" accept="image/*" multiple hidden>' : '') +
-            '<p id="rmScanStatus" class="rm-scan-status" role="status" aria-live="polite"></p></div>' +
+            '<p id="rmScanStatus" class="rm-scan-status" role="status" aria-live="polite"></p></div></div>' +
           '<div class="rm-bulk-defaults">' +
             '<div class="rm-bulk-field"><label for="rmBulkDoctor">Dokter untuk semua pasien</label><div class="rm-bulk-control"><select id="rmBulkDoctor">' + opts(Object.keys(DOKTER), '', '') + '</select><button type="button" class="secondary" data-apply-doctor>Terapkan</button></div></div>' +
             '<div class="rm-bulk-field"><label for="rmBulkPayer">Penjamin untuk semua pasien</label><div class="rm-bulk-control"><select id="rmBulkPayer">' + opts(PENJAMIN, '', '') + '</select><button type="button" class="secondary" data-apply-payer>Terapkan</button></div></div>' +
           '</div>' +
-          '<p class="hint rm-bulk-hint">Pilih dokter atau penjamin, lalu tekan Terapkan. Pilihan akan mengisi seluruh baris dan tetap bisa diubah satu per satu.</p>' +
           '<div class="rm-rowshead"><span>#</span><span>Nama pasien</span><span>No. WhatsApp</span><span>Jenis pemeriksaan</span><span>Dokter</span><span>Penjamin</span><span></span></div>' +
           '<div id="rmRows" class="rm-rows"></div>' +
           '<div class="rm-batchfoot"><button type="button" id="rmAdd" class="secondary">+ Tambah baris</button><button type="button" id="rmAdd5" class="secondary">+ 5 baris</button></div>' +
@@ -200,6 +199,7 @@
   function renderRows(vals) {
     var list = vals.slice(); while (list.length < MINROWS) list.push({});
     $('rmRows').innerHTML = list.map(function (v, i) { return rowHTML(i, v); }).join('');
+    updateSendState();
   }
   function readRows() {
     return Array.prototype.map.call(document.querySelectorAll('#rmRows .rm-row'), function (r) {
@@ -225,7 +225,12 @@
   function updateSendState() {
     var tgl = $('rmDate') ? $('rmDate').value : '', ok = isH1(tgl);
     var tip = ok ? '' : (tgl ? 'Hanya bisa dikirim H-1 (pemeriksaan besok, ' + shortDate(addDays(todayKey(), 1)) + ')' : 'Isi tanggal pemeriksaan (harus besok / H-1)');
-    document.querySelectorAll('#rmRows [data-row-send]').forEach(function (b) { b.disabled = !ok; b.title = tip; });
+    document.querySelectorAll('#rmRows .rm-row').forEach(function (row) {
+      var b = row.querySelector('[data-row-send]'); if (!b) return;
+      var full = ['.rn', '.rw', '.rj', '.rd', '.rp'].every(function (sel) { var el = row.querySelector(sel); return !!(el && el.value && el.value.trim()); });
+      b.disabled = !ok || !full;
+      b.title = !ok ? tip : (full ? '' : 'Lengkapi nama, WA, jenis, dokter, dan penjamin dulu');
+    });
     var h = $('rmDateHint');
     if (h) { h.textContent = tgl && !ok ? 'Bukan H-1: WhatsApp hanya bisa dikirim jika tanggal pemeriksaan besok (' + longDate(addDays(todayKey(), 1)) + ').' : ''; h.classList.toggle('bad', !!(tgl && !ok)); }
   }
@@ -673,6 +678,12 @@
           rec.jenis = normalizeAIExam(seg.join(' '));
           if (rec.jenis) { ws.splice(i, q); s = ' ' + ws.join(' ') + ' '; }
         }
+        if (!rec.jenis) { ws.splice(i, 1); s = ' ' + ws.join(' ') + ' '; i--; }
+      }
+      if (!rec.jenis) {
+        for (var z = 0; z < ws.length; z++) {
+          if (SCAN_START.test(ws[z])) { ws.splice(z, 1); s = ' ' + ws.join(' ') + ' '; break; }
+        }
       }
     }
     if ((m = s.match(/\b(?:penjamin\s*[:=\-]?\s*)?(bpjs|asuransi|umum)\b/i))) {
@@ -750,6 +761,13 @@
     $('rmForm').addEventListener('submit', function (e) { e.preventDefault(); });
     ['rmScanFile', 'rmScanCam'].forEach(function (id) { var el = $(id); if (el) el.addEventListener('change', function (e) { var fl = e.target.files; if (fl && fl.length) applyScanToForm(Array.prototype.slice.call(fl)); e.target.value = ''; }); });
     $('rmScanFill').addEventListener('click', applyScanAll);
+    $('rmScanToggle').addEventListener('click', function () {
+      var box = $('rmScanBox'); box.hidden = !box.hidden;
+      this.setAttribute('aria-expanded', String(!box.hidden));
+      if (!box.hidden) $('rmScanText').focus();
+    });
+    $('rmRows').addEventListener('input', updateSendState);
+    $('rmRows').addEventListener('change', updateSendState);
     $('rmRows').addEventListener('click', function (e) { var b = e.target.closest('[data-row-send]'); if (b) saveOneRow(b.closest('.rm-row')); });
     $('rmForm').addEventListener('click', function (e) {
       var doctor = e.target.closest('[data-apply-doctor]');
