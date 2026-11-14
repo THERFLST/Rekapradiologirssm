@@ -387,3 +387,21 @@ input[type=file]::file-selector-button:hover{background:color-mix(in srgb,var(--
 
 .rm-row-send .rm-sep{opacity:.55;margin:0 6px}
 .rm-row-send .rm-save-ico{vertical-align:-3px}
+
+/* ===== Tabel Reminder: sekat per kolom, tanpa teks bantu di dalam sel ===== */
+@media (min-width: 861px) {
+  #rmRows { gap: 0; border: 1px solid var(--border); border-top: 0; border-radius: 0 0 12px 12px; overflow: hidden; background: var(--surface); }
+  .rm-rowshead { grid-template-columns: 44px 1.4fr 1fr 1.1fr 1fr 1fr 36px 150px; gap: 0; border: 1px solid var(--border); border-radius: 12px 12px 0 0; background: var(--surface2); padding: 0; margin-top: 10px; }
+  .rm-rowshead > span { padding: 10px 12px; border-right: 1px solid var(--border); }
+  .rm-rowshead > span:last-child { border-right: 0; }
+  #rmRows .rm-row { grid-template-columns: 44px 1.4fr 1fr 1.1fr 1fr 1fr 36px 150px; gap: 0; padding: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; align-items: stretch; }
+  #rmRows .rm-row:last-child { border-bottom: 0; }
+  #rmRows .rm-row > * { margin: 0; min-height: 44px; }
+  #rmRows .rm-row > .rm-no { display: flex; align-items: center; justify-content: center; border-right: 1px solid var(--border); }
+  #rmRows .rm-row input, #rmRows .rm-row select { width: 100%; min-width: 0; height: 100%; border: 0; border-right: 1px solid var(--border); border-radius: 0; background: transparent; box-shadow: none; padding: 10px 12px; font: inherit; color: inherit; }
+  #rmRows .rm-row input:focus, #rmRows .rm-row select:focus { outline: 2px solid var(--accent, #0f766e); outline-offset: -2px; }
+  #rmRows .rm-row .rm-x { border: 0; border-right: 1px solid var(--border); border-radius: 0; }
+  #rmRows .rm-row .rm-row-send { border: 0; border-radius: 0; min-height: 44px; width: 100%; }
+  #rmRows .rm-row.is-bad input { background: color-mix(in srgb, var(--danger) 8%, transparent); }
+  #rmRows .rm-row.is-sent input, #rmRows .rm-row.is-sent select { background: color-mix(in srgb, var(--ok) 7%, transparent); }
+}

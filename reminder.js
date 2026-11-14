@@ -90,8 +90,8 @@
             (aiOcrEndpoint() ? '<input id="rmScanCam" type="file" accept="image/*" capture="environment" hidden><input id="rmScanFile" type="file" accept="image/*" multiple hidden>' : '') +
             '<p id="rmScanStatus" class="rm-scan-status" role="status" aria-live="polite"></p></div>' +
           '<div class="rm-bulk-defaults">' +
-            '<div class="rm-bulk-field"><label for="rmBulkDoctor">Dokter untuk semua pasien</label><div class="rm-bulk-control"><select id="rmBulkDoctor">' + opts(Object.keys(DOKTER), '', 'Pilih dokter') + '</select><button type="button" class="secondary" data-apply-doctor>Terapkan</button></div></div>' +
-            '<div class="rm-bulk-field"><label for="rmBulkPayer">Penjamin untuk semua pasien</label><div class="rm-bulk-control"><select id="rmBulkPayer">' + opts(PENJAMIN, '', 'Pilih penjamin') + '</select><button type="button" class="secondary" data-apply-payer>Terapkan</button></div></div>' +
+            '<div class="rm-bulk-field"><label for="rmBulkDoctor">Dokter untuk semua pasien</label><div class="rm-bulk-control"><select id="rmBulkDoctor">' + opts(Object.keys(DOKTER), '', '') + '</select><button type="button" class="secondary" data-apply-doctor>Terapkan</button></div></div>' +
+            '<div class="rm-bulk-field"><label for="rmBulkPayer">Penjamin untuk semua pasien</label><div class="rm-bulk-control"><select id="rmBulkPayer">' + opts(PENJAMIN, '', '') + '</select><button type="button" class="secondary" data-apply-payer>Terapkan</button></div></div>' +
           '</div>' +
           '<p class="hint rm-bulk-hint">Pilih dokter atau penjamin, lalu tekan Terapkan. Pilihan akan mengisi seluruh baris dan tetap bisa diubah satu per satu.</p>' +
           '<div class="rm-rowshead"><span>#</span><span>Nama pasien</span><span>No. WhatsApp</span><span>Jenis pemeriksaan</span><span>Dokter</span><span>Penjamin</span><span></span></div>' +
@@ -189,11 +189,11 @@
   function rowHTML(i, v) {
     var n = i + 1;
     return '<div class="rm-row' + (v.bad ? ' is-bad' : '') + (v.pid ? ' is-sent' : '') + '"' + (v.pid ? ' data-pid="' + esc(v.pid) + '"' : '') + '><span class="rm-no">' + n + '</span>' +
-      '<input class="rn" type="text" maxlength="80" placeholder="Nama lengkap" aria-label="Nama pasien baris ' + n + '" value="' + esc(v.n || '') + '">' +
-      '<input class="rw" type="tel" inputmode="tel" placeholder="0812xxxxxxxx" aria-label="No. WhatsApp baris ' + n + '" value="' + esc(v.w || '') + '">' +
-      '<select class="rj" aria-label="Jenis pemeriksaan baris ' + n + '">' + opts(JENIS, v.j || '', 'Pilih jenis') + '</select>' +
-      '<select class="rd" aria-label="Dokter baris ' + n + '">' + opts(Object.keys(DOKTER), v.d || '', 'Dokter') + '</select>' +
-      '<select class="rp" aria-label="Penjamin baris ' + n + '">' + opts(PENJAMIN, v.p || '', 'Penjamin') + '</select>' +
+      '<input class="rn" type="text" maxlength="80" aria-label="Nama pasien baris ' + n + '" value="' + esc(v.n || '') + '">' +
+      '<input class="rw" type="tel" inputmode="tel" aria-label="No. WhatsApp baris ' + n + '" value="' + esc(v.w || '') + '">' +
+      '<select class="rj" aria-label="Jenis pemeriksaan baris ' + n + '">' + opts(JENIS, v.j || '', '') + '</select>' +
+      '<select class="rd" aria-label="Dokter baris ' + n + '">' + opts(Object.keys(DOKTER), v.d || '', '') + '</select>' +
+      '<select class="rp" aria-label="Penjamin baris ' + n + '">' + opts(PENJAMIN, v.p || '', '') + '</select>' +
       '<button type="button" class="rm-x" data-rm aria-label="Hapus baris ' + n + '">\u00d7</button>' +
       '<button type="button" class="primary-action rm-row-send" data-row-send aria-label="Kirim WA dan simpan">' + BTN_KIRIM + '</button></div>';
   }
